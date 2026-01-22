@@ -19,6 +19,11 @@ on:
 
 env:
   PYTHON_VERSION: '3.10'
+  # Variables de configuración (no sensibles) - vienen de GitHub Variables
+  DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
+  WAREHOUSE_ID: ${{ vars.WAREHOUSE_ID }}
+  CATALOG: ${{ vars.CATALOG || 'main' }}
+  SCHEMA: ${{ vars.SCHEMA || 'default' }}
 
 jobs:
   lint-sql:
@@ -48,7 +53,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          key: ${{ runner.os }}-pip-sqlfluff
           restore-keys: |
             ${{ runner.os }}-pip-
 
@@ -90,39 +95,13 @@ jobs:
           echo "📌 Title: ${{ github.event.pull_request.title }}"
           echo "📌 Target: ${{ github.base_ref }}"
           echo "=============================================="
-
-      - name: 🐍 Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: 📦 Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: 🔐 Check secrets configuration
-        run: |
-          echo "🔐 Checking secrets..."
-          if [ -z "${{ secrets.DATABRICKS_HOST }}" ]; then
-            echo "⚠️  WARNING: DATABRICKS_HOST secret is not configured"
-          else
-            echo "✅ DATABRICKS_HOST is configured"
-          fi
-          if [ -z "${{ secrets.DATABRICKS_TOKEN }}" ]; then
-            echo "⚠️  WARNING: DATABRICKS_TOKEN secret is not configured"
-          else
-            echo "✅ DATABRICKS_TOKEN is configured"
-          fi
-
-      - name: 🔧 Configure Databricks
-        run: |
-          echo "🔧 Configuring Databricks CLI..."
-          mkdir -p ~/.databricks
-          echo "[dev]" > ~/.databrickscfg
-          echo "host = ${{ secrets.DATABRICKS_HOST }}" >> ~/.databrickscfg
-          echo "token = ${{ secrets.DATABRICKS_TOKEN }}" >> ~/.databrickscfg
-          echo "✅ Databricks CLI configured (check warnings above if secrets missing)"
+          echo ""
+          echo "📋 Configuration (from GitHub Variables):"
+          echo "   Host: ${{ env.DATABRICKS_HOST }}"
+          echo "   Warehouse: ${{ env.WAREHOUSE_ID }}"
+          echo "   Catalog: ${{ env.CATALOG }}"
+          echo "   Schema: ${{ env.SCHEMA }}"
+          echo "=============================================="
 
       - name: 🧪 Parse SQL (Dry Run)
         run: |
@@ -136,7 +115,6 @@ jobs:
     name: 🚀 Execute SQL Scripts
     runs-on: ubuntu-latest
     needs: lint-sql
-    # Ejecuta en push a main/develop (no depende de validate-sql)
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     environment:
       name: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
@@ -153,6 +131,13 @@ jobs:
           echo "📌 Environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}"
           echo "📌 Commit: ${{ github.sha }}"
           echo "=============================================="
+          echo ""
+          echo "📋 Configuration:"
+          echo "   Host: ${{ env.DATABRICKS_HOST }}"
+          echo "   Warehouse ID: ${{ env.WAREHOUSE_ID }}"
+          echo "   Catalog: ${{ env.CATALOG }}"
+          echo "   Schema: ${{ env.SCHEMA }}"
+          echo "=============================================="
 
       - name: 🐍 Set up Python
         uses: actions/setup-python@v5
@@ -166,86 +151,73 @@ jobs:
           pip install -r deployment/requirements-sql.txt
           echo "✅ Installed: requests, python-dotenv (only 2 packages!)"
 
-      - name: 🔐 Verify secrets
-        id: check-secrets
+      - name: 🔐 Verify configuration
         run: |
-          echo "🔐 Verifying required secrets..."
-          MISSING=""
+          echo "🔐 Verifying configuration..."
+          echo "----------------------------------------------"
 
-          if [ -z "${{ secrets.DATABRICKS_HOST }}" ]; then
-            echo "❌ DATABRICKS_HOST is NOT configured"
-            MISSING="${MISSING}DATABRICKS_HOST "
+          # Check variables (not secrets - these are visible)
+          if [ -z "${{ env.DATABRICKS_HOST }}" ]; then
+            echo "❌ DATABRICKS_HOST variable is NOT configured"
+            echo "📖 Configure in: Settings > Secrets and variables > Actions > Variables"
+            exit 1
           else
-            echo "✅ DATABRICKS_HOST is configured"
+            echo "✅ DATABRICKS_HOST: ${{ env.DATABRICKS_HOST }}"
           fi
 
+          if [ -z "${{ env.WAREHOUSE_ID }}" ]; then
+            echo "❌ WAREHOUSE_ID variable is NOT configured"
+            exit 1
+          else
+            echo "✅ WAREHOUSE_ID: ${{ env.WAREHOUSE_ID }}"
+          fi
+
+          # Check secret (only check if exists, don't print)
           if [ -z "${{ secrets.DATABRICKS_TOKEN }}" ]; then
-            echo "❌ DATABRICKS_TOKEN is NOT configured"
-            MISSING="${MISSING}DATABRICKS_TOKEN "
+            echo "❌ DATABRICKS_TOKEN secret is NOT configured"
+            echo "📖 Configure in: Settings > Secrets and variables > Actions > Secrets"
+            exit 1
           else
-            echo "✅ DATABRICKS_TOKEN is configured"
-          fi
-
-          if [ -z "${{ secrets.WAREHOUSE_ID }}" ]; then
-            echo "❌ WAREHOUSE_ID is NOT configured"
-            MISSING="${MISSING}WAREHOUSE_ID "
-          else
-            echo "✅ WAREHOUSE_ID is configured"
+            echo "✅ DATABRICKS_TOKEN: configured (secret)"
           fi
 
           echo "----------------------------------------------"
-          if [ -n "$MISSING" ]; then
-            echo "❌ Missing secrets: $MISSING"
-            echo "📖 Configure them in: Settings > Secrets > Actions"
-            echo "secrets_ok=false" >> $GITHUB_OUTPUT
-            exit 1
-          else
-            echo "✅ All required secrets are configured!"
-            echo "secrets_ok=true" >> $GITHUB_OUTPUT
-          fi
+          echo "✅ All configuration verified!"
 
       - name: 🔧 Configure Databricks
         run: |
           echo "🔧 Configuring Databricks CLI..."
           mkdir -p ~/.databricks
           echo "[dev]" > ~/.databrickscfg
-          echo "host = ${{ secrets.DATABRICKS_HOST }}" >> ~/.databrickscfg
+          echo "host = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
           echo "token = ${{ secrets.DATABRICKS_TOKEN }}" >> ~/.databrickscfg
           echo "✅ Databricks CLI configured"
 
       - name: 🔍 Verify Databricks connection
-        env:
-          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
           echo "🔍 Verifying Databricks connection..."
           echo "----------------------------------------------"
-          echo "📌 Host: $DATABRICKS_HOST"
-          echo "📌 Token: ${DATABRICKS_TOKEN:0:10}... (truncated for security)"
+          echo "📌 Host: ${{ env.DATABRICKS_HOST }}"
           echo "----------------------------------------------"
 
-          # Test connection using Databricks CLI
+          # Test connection
           echo "🧪 Testing API connection..."
-          RESPONSE=$(curl -s -X GET \
-            -H "Authorization: Bearer $DATABRICKS_TOKEN" \
-            "$DATABRICKS_HOST/api/2.0/clusters/list" \
-            -w "\nHTTP_CODE:%{http_code}" 2>&1)
-
-          HTTP_CODE=$(echo "$RESPONSE" | grep "HTTP_CODE:" | cut -d: -f2)
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.DATABRICKS_TOKEN }}" \
+            "${{ env.DATABRICKS_HOST }}/api/2.0/clusters/list")
 
           echo "📡 API Response Code: $HTTP_CODE"
 
           if [ "$HTTP_CODE" = "200" ]; then
             echo "✅ Successfully connected to Databricks!"
           elif [ "$HTTP_CODE" = "401" ]; then
-            echo "❌ Authentication failed - check DATABRICKS_TOKEN"
+            echo "❌ Authentication failed - check DATABRICKS_TOKEN secret"
+            exit 1
           elif [ "$HTTP_CODE" = "403" ]; then
             echo "❌ Access denied - check token permissions"
-          elif [ "$HTTP_CODE" = "404" ]; then
-            echo "❌ Host not found - check DATABRICKS_HOST URL"
+            exit 1
           else
             echo "⚠️ Unexpected response: $HTTP_CODE"
-            echo "Response: $(echo "$RESPONSE" | head -5)"
           fi
           echo "----------------------------------------------"
 
@@ -258,20 +230,16 @@ jobs:
 
       - name: 🚀 Execute SQL migrations
         env:
-          WAREHOUSE_ID: ${{ secrets.WAREHOUSE_ID }}
-          CATALOG: ${{ secrets.CATALOG || 'main' }}
-          SCHEMA: ${{ secrets.SCHEMA || 'default' }}
+          DATABRICKS_HOST: ${{ env.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
           echo "🚀 Starting SQL execution..."
-          echo "📌 Warehouse ID: $WAREHOUSE_ID"
-          echo "📌 Catalog: $CATALOG"
-          echo "📌 Schema: $SCHEMA"
           echo "----------------------------------------------"
           cd deployment
           python sql_executor.py ../scripts/sql/migrations/ \
-            --warehouse-id $WAREHOUSE_ID \
-            --catalog $CATALOG \
-            --schema $SCHEMA \
+            --warehouse-id "${{ env.WAREHOUSE_ID }}" \
+            --catalog "${{ env.CATALOG }}" \
+            --schema "${{ env.SCHEMA }}" \
             --pattern "V*.sql"
 
       - name: ✅ Execution completed
@@ -328,14 +296,16 @@ jobs:
         run: |
           mkdir -p ~/.databricks
           echo "[dev]" > ~/.databrickscfg
-          echo "host = ${{ secrets.DATABRICKS_HOST }}" >> ~/.databrickscfg
+          echo "host = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
           echo "token = ${{ secrets.DATABRICKS_TOKEN }}" >> ~/.databrickscfg
 
       - name: 🧪 Run Great Expectations
         env:
-          WAREHOUSE_ID: ${{ secrets.WAREHOUSE_ID }}
-          CATALOG: ${{ secrets.CATALOG || 'main' }}
-          SCHEMA: ${{ secrets.SCHEMA || 'default' }}
+          DATABRICKS_HOST: ${{ env.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+          WAREHOUSE_ID: ${{ env.WAREHOUSE_ID }}
+          CATALOG: ${{ env.CATALOG }}
+          SCHEMA: ${{ env.SCHEMA }}
         run: |
           echo "🧪 Running data quality checks..."
           great_expectations checkpoint run data_quality_checkpoint || echo "⚠️ Some data quality checks failed"
