@@ -7,25 +7,26 @@ CREATE TABLE IF NOT EXISTS main.bronze.customers1 (
     customer_id BIGINT GENERATED ALWAYS AS IDENTITY,
     customer_name STRING NOT NULL,
     email STRING NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+    created_at TIMESTAMP ,
+    updated_at TIMESTAMP ,
     CONSTRAINT pk_customers PRIMARY KEY (customer_id)
 ) USING DELTA
 COMMENT 'Tabla de clientes';
 
-/*
+
 -- Tabla de productos
 CREATE TABLE IF NOT EXISTS bronze.products (
     product_id BIGINT GENERATED ALWAYS AS IDENTITY,
     product_name STRING NOT NULL,
     category STRING,
     price DECIMAL(10, 2),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+    created_at TIMESTAMP ,
+    updated_at TIMESTAMP ,
     CONSTRAINT pk_products PRIMARY KEY (product_id)
 ) USING DELTA
 COMMENT 'Catálogo de productos';
 
+/*
 -- Tabla de órdenes
 CREATE TABLE IF NOT EXISTS bronze.orders (
     order_id BIGINT GENERATED ALWAYS AS IDENTITY,
@@ -53,8 +54,8 @@ CREATE TABLE IF NOT EXISTS order_items (
 COMMENT 'Items de cada orden';
 */
 -- Comentarios en columnas
-COMMENT ON TABLE bronze.customers1 IS 'Clientes registrados';
---COMMENT ON TABLE bronze.products IS 'Catálogo de productos disponibles';
+COMMENT ON TABLE main.bronze.customers1 IS 'Clientes registrados';
+COMMENT ON TABLE main.bronze.products IS 'Catálogo de productos disponibles';
 --COMMENT ON TABLE bronze.orders IS 'Órdenes realizadas por clientes';
 
 --COMMENT ON TABLE order_items IS 'Detalle de productos en cada orden';
