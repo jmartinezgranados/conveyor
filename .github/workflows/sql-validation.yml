@@ -159,11 +159,12 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: 📦 Install dependencies
+      - name: 📦 Install minimal dependencies
         run: |
-          echo "📦 Installing dependencies..."
+          echo "📦 Installing minimal dependencies for SQL execution..."
           pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r deployment/requirements-sql.txt
+          echo "✅ Installed: requests, python-dotenv (only 2 packages!)"
 
       - name: 🔐 Verify secrets
         id: check-secrets

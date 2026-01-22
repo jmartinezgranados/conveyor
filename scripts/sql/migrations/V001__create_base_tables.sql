@@ -2,7 +2,7 @@
 -- Crea las tablas base del proyecto
 
 -- Tabla de clientes
-CREATE TABLE IF NOT EXISTS customers (
+CREATE TABLE IF NOT EXISTS customers1 (
     customer_id BIGINT GENERATED ALWAYS AS IDENTITY,
     customer_name STRING NOT NULL,
     email STRING NOT NULL,
@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS order_items (
 COMMENT 'Items de cada orden';
 */
 -- Comentarios en columnas
-COMMENT ON TABLE customers IS 'Clientes registrados';
+COMMENT ON TABLE customers1 IS 'Clientes registrados';
 COMMENT ON TABLE products IS 'Catálogo de productos disponibles';
 COMMENT ON TABLE orders IS 'Órdenes realizadas por clientes';
 
