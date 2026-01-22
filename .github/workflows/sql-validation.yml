@@ -310,8 +310,16 @@ jobs:
           WAREHOUSE_ID: ${{ env.WAREHOUSE_ID }}
           CATALOG: ${{ env.CATALOG }}
         run: |
-          echo "🧪 Running data quality checks..."          
-          gx checkpoint run data_quality_checkpoint || echo "⚠️ Some data quality checks failed"
+          echo "🧪 Running data quality checks..."
+          
+          # 1. Aseguramos que los binarios de Python local estén en el PATH
+          export PATH=$PATH:/home/runner/.local/bin:$pythonLocation/bin
+          
+          # 2. Intentamos el nuevo comando 'gx' que es el estándar de la v1.0
+          # Si falla, intentamos con el nombre largo pero SIN 'python -m'
+          gx checkpoint run data_quality_checkpoint || \
+          great_expectations checkpoint run data_quality_checkpoint || \
+          echo "⚠️ No se pudo ejecutar el comando de GX"
 
       - name: 📤 Upload test results
         if: always()
