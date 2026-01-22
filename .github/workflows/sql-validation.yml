@@ -310,6 +310,11 @@ jobs:
           CATALOG: ${{ env.CATALOG }}
         run: |
           echo "🧪 Running data quality checks..."
+          which python
+          python --version
+          pip --version
+          python -m pip show great-expectations
+          python -m great_expectations --version
           python -m great_expectations checkpoint run data_quality_checkpoint || echo "⚠️ Some data quality checks failed"
 
       - name: 📤 Upload test results
