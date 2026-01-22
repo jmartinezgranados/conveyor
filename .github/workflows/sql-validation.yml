@@ -310,7 +310,7 @@ jobs:
           CATALOG: ${{ env.CATALOG }}
         run: |
           echo "🧪 Running data quality checks..."
-          great_expectations checkpoint run data_quality_checkpoint || echo "⚠️ Some data quality checks failed"
+          python -m great_expectations checkpoint run data_quality_checkpoint || echo "⚠️ Some data quality checks failed"
 
       - name: 📤 Upload test results
         if: always()
