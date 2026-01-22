@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS orders (
 ) USING DELTA
 COMMENT 'Órdenes de compra';
 
+/*
 -- Tabla de items de orden
 CREATE TABLE IF NOT EXISTS order_items (
     order_item_id BIGINT GENERATED ALWAYS AS IDENTITY,
@@ -48,9 +49,10 @@ CREATE TABLE IF NOT EXISTS order_items (
     CONSTRAINT pk_order_items PRIMARY KEY (order_item_id)
 ) USING DELTA
 COMMENT 'Items de cada orden';
-
+*/
 -- Comentarios en columnas
-COMMENT ON TABLE customers IS 'Información de clientes registrados';
+COMMENT ON TABLE customers IS 'Clientes registrados';
 COMMENT ON TABLE products IS 'Catálogo de productos disponibles';
 COMMENT ON TABLE orders IS 'Órdenes realizadas por clientes';
-COMMENT ON TABLE order_items IS 'Detalle de productos en cada orden';
+
+--COMMENT ON TABLE order_items IS 'Detalle de productos en cada orden';
