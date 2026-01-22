@@ -23,7 +23,6 @@ env:
   DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
   WAREHOUSE_ID: ${{ vars.WAREHOUSE_ID }}
   CATALOG: ${{ vars.CATALOG || 'main' }}
-  SCHEMA: ${{ vars.SCHEMA || 'default' }}
 
 jobs:
   lint-sql:
@@ -100,7 +99,6 @@ jobs:
           echo "   Host: ${{ env.DATABRICKS_HOST }}"
           echo "   Warehouse: ${{ env.WAREHOUSE_ID }}"
           echo "   Catalog: ${{ env.CATALOG }}"
-          echo "   Schema: ${{ env.SCHEMA }}"
           echo "=============================================="
 
       - name: 🧪 Parse SQL (Dry Run)
@@ -136,7 +134,6 @@ jobs:
           echo "   Host: ${{ env.DATABRICKS_HOST }}"
           echo "   Warehouse ID: ${{ env.WAREHOUSE_ID }}"
           echo "   Catalog: ${{ env.CATALOG }}"
-          echo "   Schema: ${{ env.SCHEMA }}"
           echo "=============================================="
 
       - name: 🐍 Set up Python
@@ -232,14 +229,19 @@ jobs:
         env:
           DATABRICKS_HOST: ${{ env.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+          WAREHOUSE_ID: ${{ env.WAREHOUSE_ID }}
+          CATALOG: ${{ env.CATALOG }}
         run: |
           echo "🚀 Starting SQL execution..."
           echo "----------------------------------------------"
+          echo "📋 Variables que se usarán:"
+          echo "   CATALOG: $CATALOG"
+          echo "   WAREHOUSE_ID: $WAREHOUSE_ID"
+          echo "----------------------------------------------"
           cd deployment
           python sql_executor.py ../scripts/sql/migrations/ \
-            --warehouse-id "${{ env.WAREHOUSE_ID }}" \
-            --catalog "${{ env.CATALOG }}" \
-            --schema "${{ env.SCHEMA }}" \
+            --warehouse-id "$WAREHOUSE_ID" \
+            --catalog "$CATALOG" \
             --pattern "V*.sql"
 
       - name: ✅ Execution completed
@@ -305,7 +307,6 @@ jobs:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
           WAREHOUSE_ID: ${{ env.WAREHOUSE_ID }}
           CATALOG: ${{ env.CATALOG }}
-          SCHEMA: ${{ env.SCHEMA }}
         run: |
           echo "🧪 Running data quality checks..."
           great_expectations checkpoint run data_quality_checkpoint || echo "⚠️ Some data quality checks failed"

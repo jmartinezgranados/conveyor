@@ -2,7 +2,7 @@
 -- Crea las tablas base del proyecto
 
 -- Tabla de clientes
-CREATE TABLE IF NOT EXISTS customers1 (
+CREATE TABLE IF NOT EXISTS bronze.customers1 (
     customer_id BIGINT GENERATED ALWAYS AS IDENTITY,
     customer_name STRING NOT NULL,
     email STRING NOT NULL,
@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS customers1 (
 COMMENT 'Tabla de clientes';
 
 -- Tabla de productos
-CREATE TABLE IF NOT EXISTS products (
+CREATE TABLE IF NOT EXISTS bronze.products (
     product_id BIGINT GENERATED ALWAYS AS IDENTITY,
     product_name STRING NOT NULL,
     category STRING,
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS products (
 COMMENT 'Catálogo de productos';
 
 -- Tabla de órdenes
-CREATE TABLE IF NOT EXISTS orders (
+CREATE TABLE IF NOT EXISTS bronze.orders (
     order_id BIGINT GENERATED ALWAYS AS IDENTITY,
     customer_id BIGINT NOT NULL,
     order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
@@ -51,8 +51,8 @@ CREATE TABLE IF NOT EXISTS order_items (
 COMMENT 'Items de cada orden';
 */
 -- Comentarios en columnas
-COMMENT ON TABLE customers1 IS 'Clientes registrados';
-COMMENT ON TABLE products IS 'Catálogo de productos disponibles';
-COMMENT ON TABLE orders IS 'Órdenes realizadas por clientes';
+COMMENT ON TABLE bronze.customers1 IS 'Clientes registrados';
+COMMENT ON TABLE bronze.products IS 'Catálogo de productos disponibles';
+COMMENT ON TABLE bronze.orders IS 'Órdenes realizadas por clientes';
 
 --COMMENT ON TABLE order_items IS 'Detalle de productos en cada orden';
