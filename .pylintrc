@@ -1,0 +1,58 @@
+[MASTER]
+# Files or directories to be skipped
+ignore=venv,env,.venv,.env,tests,__pycache__
+
+# Use multiple processes to speed up Pylint
+jobs=4
+
+[MESSAGES CONTROL]
+# Disable specific warnings
+disable=
+    missing-module-docstring,
+    missing-class-docstring,
+    too-few-public-methods,
+    too-many-arguments,
+    too-many-locals,
+    too-many-branches,
+    too-many-statements,
+    logging-fstring-interpolation,
+    broad-exception-caught
+
+[BASIC]
+# Good variable names
+good-names=i,j,k,ex,df,_,id
+
+# Regular expressions for naming conventions
+module-naming-style=snake_case
+class-naming-style=PascalCase
+function-naming-style=snake_case
+method-naming-style=snake_case
+const-naming-style=UPPER_CASE
+attr-naming-style=snake_case
+argument-naming-style=snake_case
+variable-naming-style=snake_case
+
+[FORMAT]
+# Maximum number of characters on a single line
+max-line-length=120
+
+# Maximum number of lines in a module
+max-module-lines=1000
+
+[DESIGN]
+# Maximum number of attributes for a class
+max-attributes=10
+
+# Maximum number of parents for a class
+max-parents=7
+
+[IMPORTS]
+# Deprecated modules
+deprecated-modules=regsub,TERMIOS,Bastion,rexec
+
+[SIMILARITIES]
+# Minimum lines number of a similarity
+min-similarity-lines=4
+
+# Ignore imports when computing similarities
+ignore-imports=yes

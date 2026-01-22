@@ -1,0 +1,50 @@
+# Development Environment Configuration
+# =====================================
+# NOTA: Los secretos (host, token, warehouse_id) van en:
+#   - Local: archivo .env (no se sube a git)
+#   - GitHub Actions: Settings > Secrets > Actions
+#
+# Este archivo solo contiene configuración NO sensible.
+
+# Databricks Configuration (valores vienen de secrets/env vars)
+databricks:
+  profile: dev
+
+# Unity Catalog (pueden ir aquí o en secrets si son sensibles)
+catalog: dev_catalog
+schema: analytics
+
+# Token Management
+token:
+  lifetime_hours: 2
+  prefix: sqlops_temp_dev_
+
+# Great Expectations
+great_expectations:
+  data_context_root: tests/great_expectations
+  checkpoint_name: data_quality_checkpoint
+  
+# Job Configuration
+jobs:
+  etl_pipeline:
+    name: ETL Pipeline - Development
+    cluster_size: small
+    max_retries: 1
+    timeout_seconds: 3600
+    
+  data_quality:
+    name: Data Quality Checks - Development
+    schedule: "0 0 6 * * ?" # Daily at 6 AM
+    enabled: true
+
+# Notifications
+notifications:
+  on_failure:
+    - email: dev-team@company.com
+  on_success: []
+
+# Deployment Settings
+deployment:
+  continue_on_error: false
+  dry_run: false
+  backup_enabled: true

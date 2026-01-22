@@ -1,0 +1,57 @@
+[sqlfluff]
+# Dialect
+dialect = databricks
+templater = jinja
+
+# Formatting
+max_line_length = 120
+indent_unit = space
+tab_space_size = 4
+
+# Exclude patterns
+exclude_rules = L034, L036
+
+# Rules
+[sqlfluff:rules]
+capitalisation_policy = upper
+extended_capitalisation_policy = upper
+
+[sqlfluff:rules:L010]
+# Keywords must be upper case
+capitalisation_policy = upper
+
+[sqlfluff:rules:L014]
+# Unquoted identifiers must be lower case
+extended_capitalisation_policy = lower
+unquoted_identifiers_policy = lower
+
+[sqlfluff:rules:L030]
+# Function names must be upper case
+extended_capitalisation_policy = upper
+
+[sqlfluff:rules:L040]
+# Null & boolean values must be upper case
+capitalisation_policy = upper
+
+[sqlfluff:rules:L042]
+# Join clauses should be fully qualified
+fully_qualify_join_types = inner
+
+[sqlfluff:rules:L052]
+# Semi-colon formatting
+multiline_newline = True
+require_final_semicolon = False
+
+[sqlfluff:rules:L054]
+# GROUP BY/ORDER BY column references
+group_by_and_order_by_style = explicit
+
+[sqlfluff:indentation]
+# Indentation configuration
+indented_joins = False
+indented_ctes = False
+indented_using_on = True
+template_blocks_indent = True
+
+[sqlfluff:templater:jinja]
+apply_dbt_builtins = False

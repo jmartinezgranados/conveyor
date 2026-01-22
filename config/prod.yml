@@ -1,0 +1,63 @@
+# Production Environment Configuration
+# =====================================
+# NOTA: Los secretos (host, token, warehouse_id) van en:
+#   - Local: archivo .env (no se sube a git)
+#   - GitHub Actions: Settings > Secrets > Actions
+#
+# Este archivo solo contiene configuración NO sensible.
+
+# Databricks Configuration (valores vienen de secrets/env vars)
+databricks:
+  profile: prod
+
+# Unity Catalog (pueden ir aquí o en secrets si son sensibles)
+catalog: prod_catalog
+schema: analytics
+
+# Token Management
+token:
+  lifetime_hours: 1  # Shorter lifetime for production
+  prefix: sqlops_temp_prod_
+
+# Great Expectations
+great_expectations:
+  data_context_root: tests/great_expectations
+  checkpoint_name: data_quality_checkpoint
+  fail_on_error: true  # Strict mode in production
+  
+# Job Configuration
+jobs:
+  etl_pipeline:
+    name: ETL Pipeline - Production
+    cluster_size: large
+    max_retries: 3
+    timeout_seconds: 7200
+    
+  data_quality:
+    name: Data Quality Checks - Production
+    schedule: "0 0 2,14 * * ?" # Twice daily at 2 AM and 2 PM
+    enabled: true
+
+# Notifications
+notifications:
+  on_failure:
+    - email: data-team@company.com
+    - email: alerts@company.com
+    - slack: "#data-alerts"
+  on_success:
+    - email: data-team@company.com
+
+# Deployment Settings
+deployment:
+  continue_on_error: false
+  dry_run: false
+  backup_enabled: true
+  require_approval: true  # Manual approval required
+  rollback_on_failure: true
+
+# Monitoring
+monitoring:
+  enabled: true
+  metrics_retention_days: 90
+  alert_on_quality_degradation: true
+  quality_threshold: 0.95  # 95% data quality required

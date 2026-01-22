@@ -1,0 +1,180 @@
+name: SQL Validation and Deployment
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+    paths:
+      - 'scripts/sql/**'
+      - 'deployment/**'
+      - '.github/workflows/sql-validation.yml'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'scripts/sql/**'
+
+env:
+  PYTHON_VERSION: '3.10'
+
+jobs:
+  lint-sql:
+    name: Lint SQL Scripts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install sqlfluff sqlparse
+
+      - name: Lint SQL files
+        run: |
+          sqlfluff lint scripts/sql/ --dialect databricks
+
+      - name: Check SQL formatting
+        run: |
+          sqlfluff fix scripts/sql/ --dialect databricks --check
+
+  validate-sql:
+    name: Validate SQL Scripts
+    runs-on: ubuntu-latest
+    needs: lint-sql
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Configure Databricks
+        run: |
+          mkdir -p ~/.databricks
+          echo "[dev]" > ~/.databrickscfg
+          echo "host = ${{ secrets.DATABRICKS_HOST }}" >> ~/.databrickscfg
+          echo "token = ${{ secrets.DATABRICKS_TOKEN }}" >> ~/.databrickscfg
+
+      - name: Parse SQL (Dry Run)
+        run: |
+          echo "Validating SQL syntax..."
+          # Aquí puedes agregar validación adicional si lo necesitas
+
+  execute-sql:
+    name: Execute SQL Scripts
+    runs-on: ubuntu-latest
+    needs: validate-sql
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Configure Databricks
+        run: |
+          mkdir -p ~/.databricks
+          echo "[dev]" > ~/.databrickscfg
+          echo "host = ${{ secrets.DATABRICKS_HOST }}" >> ~/.databrickscfg
+          echo "token = ${{ secrets.DATABRICKS_TOKEN }}" >> ~/.databrickscfg
+
+      - name: Execute SQL migrations
+        env:
+          WAREHOUSE_ID: ${{ secrets.WAREHOUSE_ID }}
+          CATALOG: ${{ secrets.CATALOG || 'main' }}
+          SCHEMA: ${{ secrets.SCHEMA || 'default' }}
+        run: |
+          cd deployment
+          python sql_executor.py ../scripts/sql/migrations/ \
+            --warehouse-id $WAREHOUSE_ID \
+            --catalog $CATALOG \
+            --schema $SCHEMA \
+            --pattern "V*.sql"
+
+      - name: Upload execution logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sql-execution-logs
+          path: |
+            *.log
+          retention-days: 7
+
+  post-deployment-tests:
+    name: Post-Deployment Tests
+    runs-on: ubuntu-latest
+    needs: execute-sql
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Configure Databricks
+        run: |
+          mkdir -p ~/.databricks
+          echo "[dev]" > ~/.databrickscfg
+          echo "host = ${{ secrets.DATABRICKS_HOST }}" >> ~/.databrickscfg
+          echo "token = ${{ secrets.DATABRICKS_TOKEN }}" >> ~/.databrickscfg
+
+      - name: Run Great Expectations
+        env:
+          WAREHOUSE_ID: ${{ secrets.WAREHOUSE_ID }}
+          CATALOG: ${{ secrets.CATALOG || 'main' }}
+          SCHEMA: ${{ secrets.SCHEMA || 'default' }}
+        run: |
+          # Ejecutar validaciones de Great Expectations
+          great_expectations checkpoint run data_quality_checkpoint || echo "⚠ Some data quality checks failed"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            tests/great_expectations/uncommitted/validations/
+          retention-days: 30

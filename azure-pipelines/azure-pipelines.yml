@@ -1,0 +1,274 @@
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+      - feature/*
+  paths:
+    include:
+      - scripts/**
+      - deployment/**
+      - tests/**
+      - azure-pipelines/**
+
+pr:
+  branches:
+    include:
+      - main
+      - develop
+  paths:
+    include:
+      - scripts/**
+
+variables:
+  pythonVersion: '3.10'
+  workingDirectory: '$(System.DefaultWorkingDirectory)'
+
+stages:
+  - stage: Validate
+    displayName: 'Validation Stage'
+    jobs:
+      - job: LintSQL
+        displayName: 'Lint SQL Scripts'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '$(pythonVersion)'
+            displayName: 'Use Python $(pythonVersion)'
+
+          - script: |
+              pip install sqlfluff sqlparse
+            displayName: 'Install SQL linting tools'
+
+          - script: |
+              sqlfluff lint scripts/sql/ --dialect databricks
+            displayName: 'Run SQLFluff'
+
+      - job: LintPython
+        displayName: 'Lint Python Scripts'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '$(pythonVersion)'
+
+          - script: |
+              pip install -r requirements.txt
+              pip install pylint black flake8 mypy isort
+            displayName: 'Install dependencies'
+
+          - script: |
+              black --check scripts/python/ deployment/
+            displayName: 'Check formatting with Black'
+
+          - script: |
+              pylint scripts/python/ deployment/ --exit-zero
+            displayName: 'Run Pylint'
+
+          - script: |
+              flake8 scripts/python/ deployment/ --max-line-length=120
+            displayName: 'Run Flake8'
+
+      - job: UnitTests
+        displayName: 'Run Unit Tests'
+        dependsOn: LintPython
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '$(pythonVersion)'
+
+          - script: |
+              pip install -r requirements.txt
+              pip install pytest pytest-cov pytest-mock
+            displayName: 'Install dependencies'
+
+          - script: |
+              pytest tests/unit/ -v --cov=scripts/python --cov=deployment \
+                --cov-report=xml --cov-report=html --junitxml=test-results.xml
+            displayName: 'Run unit tests'
+
+          - task: PublishTestResults@2
+            condition: succeededOrFailed()
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: '**/test-results.xml'
+              testRunTitle: 'Unit Tests'
+
+          - task: PublishCodeCoverageResults@1
+            inputs:
+              codeCoverageTool: 'Cobertura'
+              summaryFileLocation: '$(System.DefaultWorkingDirectory)/coverage.xml'
+
+  - stage: Deploy_Dev
+    displayName: 'Deploy to Development'
+    dependsOn: Validate
+    condition: and(succeeded(), in(variables['Build.SourceBranch'], 'refs/heads/develop', 'refs/heads/main'))
+    jobs:
+      - deployment: DeploySQL
+        displayName: 'Deploy SQL Scripts'
+        pool:
+          vmImage: 'ubuntu-latest'
+        environment: 'development'
+        variables:
+          - group: databricks-dev
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+
+                - task: UsePythonVersion@0
+                  inputs:
+                    versionSpec: '$(pythonVersion)'
+
+                - script: |
+                    pip install -r requirements.txt
+                  displayName: 'Install dependencies'
+
+                - script: |
+                    mkdir -p ~/.databricks
+                    echo "[dev]" > ~/.databrickscfg
+                    echo "host = $(databricks.host)" >> ~/.databrickscfg
+                    echo "token = $(databricks.token)" >> ~/.databrickscfg
+                  displayName: 'Configure Databricks CLI'
+
+                - script: |
+                    cd deployment
+                    python sql_executor.py ../scripts/sql/migrations/ \
+                      --warehouse-id $(warehouse.id) \
+                      --catalog $(catalog.name) \
+                      --schema $(schema.name) \
+                      --pattern "V*.sql"
+                  displayName: 'Execute SQL migrations'
+                  env:
+                    WAREHOUSE_ID: $(warehouse.id)
+                    CATALOG: $(catalog.name)
+                    SCHEMA: $(schema.name)
+
+      - deployment: DeployPython
+        displayName: 'Deploy Python Jobs'
+        dependsOn: DeploySQL
+        pool:
+          vmImage: 'ubuntu-latest'
+        environment: 'development'
+        variables:
+          - group: databricks-dev
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+
+                - task: UsePythonVersion@0
+                  inputs:
+                    versionSpec: '$(pythonVersion)'
+
+                - script: |
+                    pip install databricks-cli databricks-sdk
+                  displayName: 'Install Databricks CLI'
+
+                - script: |
+                    mkdir -p ~/.databricks
+                    echo "[dev]" > ~/.databrickscfg
+                    echo "host = $(databricks.host)" >> ~/.databrickscfg
+                    echo "token = $(databricks.token)" >> ~/.databrickscfg
+                  displayName: 'Configure Databricks CLI'
+
+                - script: |
+                    databricks fs mkdirs dbfs:/cicd/scripts/python/
+                    databricks fs cp scripts/python/ dbfs:/cicd/scripts/python/ --recursive --overwrite
+                  displayName: 'Upload Python scripts to DBFS'
+
+      - job: PostDeploymentTests
+        displayName: 'Post-Deployment Tests'
+        dependsOn: [DeploySQL, DeployPython]
+        pool:
+          vmImage: 'ubuntu-latest'
+        variables:
+          - group: databricks-dev
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '$(pythonVersion)'
+
+          - script: |
+              pip install -r requirements.txt
+            displayName: 'Install dependencies'
+
+          - script: |
+              mkdir -p ~/.databricks
+              echo "[dev]" > ~/.databrickscfg
+              echo "host = $(databricks.host)" >> ~/.databrickscfg
+              echo "token = $(databricks.token)" >> ~/.databrickscfg
+            displayName: 'Configure Databricks CLI'
+
+          - script: |
+              export DATABRICKS_HOST=$(databricks.host)
+              export DATABRICKS_TOKEN=$(databricks.token)
+              export WAREHOUSE_ID=$(warehouse.id)
+              export CATALOG=$(catalog.name)
+              export SCHEMA=$(schema.name)
+              great_expectations checkpoint run data_quality_checkpoint
+            displayName: 'Run Great Expectations validation'
+            continueOnError: true
+
+  - stage: Deploy_Prod
+    displayName: 'Deploy to Production'
+    dependsOn: Deploy_Dev
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: DeployProd
+        displayName: 'Production Deployment'
+        pool:
+          vmImage: 'ubuntu-latest'
+        environment: 'production'
+        variables:
+          - group: databricks-prod
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+
+                - task: UsePythonVersion@0
+                  inputs:
+                    versionSpec: '$(pythonVersion)'
+
+                - script: |
+                    pip install -r requirements.txt
+                  displayName: 'Install dependencies'
+
+                - script: |
+                    mkdir -p ~/.databricks
+                    echo "[prod]" > ~/.databrickscfg
+                    echo "host = $(databricks.host)" >> ~/.databrickscfg
+                    echo "token = $(databricks.token)" >> ~/.databrickscfg
+                  displayName: 'Configure Databricks CLI'
+
+                - script: |
+                    cd deployment
+                    python sql_executor.py ../scripts/sql/migrations/ \
+                      --warehouse-id $(warehouse.id) \
+                      --catalog $(catalog.name) \
+                      --schema $(schema.name) \
+                      --pattern "V*.sql"
+                  displayName: 'Execute SQL migrations'
+
+                - script: |
+                    databricks fs mkdirs dbfs:/cicd/scripts/python/
+                    databricks fs cp scripts/python/ dbfs:/cicd/scripts/python/ --recursive --overwrite
+                  displayName: 'Upload Python scripts'
+
+                - script: |
+                    export DATABRICKS_HOST=$(databricks.host)
+                    export DATABRICKS_TOKEN=$(databricks.token)
+                    export WAREHOUSE_ID=$(warehouse.id)
+                    export CATALOG=$(catalog.name)
+                    export SCHEMA=$(schema.name)
+                    great_expectations checkpoint run data_quality_checkpoint
+                  displayName: 'Validate data quality'

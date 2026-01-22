@@ -1,0 +1,190 @@
+name: Python Validation and Deployment
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+    paths:
+      - 'scripts/python/**'
+      - 'tests/**'
+      - '.github/workflows/python-validation.yml'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'scripts/python/**'
+
+env:
+  PYTHON_VERSION: '3.10'
+
+jobs:
+  lint-python:
+    name: Lint Python Code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install pylint black flake8 mypy isort
+
+      - name: Check formatting with Black
+        run: |
+          black --check scripts/python/ deployment/
+
+      - name: Lint with Pylint
+        run: |
+          pylint scripts/python/ deployment/ --exit-zero
+
+      - name: Lint with Flake8
+        run: |
+          flake8 scripts/python/ deployment/ --max-line-length=120 --extend-ignore=E203,W503
+
+      - name: Check imports with isort
+        run: |
+          isort --check-only scripts/python/ deployment/
+
+      - name: Type check with mypy
+        run: |
+          mypy scripts/python/ deployment/ --ignore-missing-imports
+
+  unit-tests:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+    needs: lint-python
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-mock
+
+      - name: Run unit tests
+        run: |
+          pytest tests/unit/ -v --cov=scripts/python --cov=deployment --cov-report=xml --cov-report=html
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: htmlcov/
+          retention-days: 7
+
+  integration-tests:
+    name: Run Integration Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Configure Databricks
+        run: |
+          mkdir -p ~/.databricks
+          echo "[dev]" > ~/.databrickscfg
+          echo "host = ${{ secrets.DATABRICKS_HOST }}" >> ~/.databrickscfg
+          echo "token = ${{ secrets.DATABRICKS_TOKEN }}" >> ~/.databrickscfg
+
+      - name: Run integration tests
+        env:
+          WAREHOUSE_ID: ${{ secrets.WAREHOUSE_ID }}
+          CATALOG: ${{ secrets.CATALOG || 'main' }}
+          SCHEMA: ${{ secrets.SCHEMA || 'default' }}
+        run: |
+          pytest tests/integration/ -v -m integration
+
+  deploy-python-jobs:
+    name: Deploy Python Jobs
+    runs-on: ubuntu-latest
+    needs: [lint-python, unit-tests]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Databricks CLI
+        run: |
+          pip install --upgrade pip
+          pip install databricks-cli databricks-sdk
+
+      - name: Configure Databricks
+        run: |
+          mkdir -p ~/.databricks
+          echo "[dev]" > ~/.databrickscfg
+          echo "host = ${{ secrets.DATABRICKS_HOST }}" >> ~/.databrickscfg
+          echo "token = ${{ secrets.DATABRICKS_TOKEN }}" >> ~/.databrickscfg
+
+      - name: Upload Python scripts to DBFS
+        run: |
+          # Crear directorio en DBFS
+          databricks fs mkdirs dbfs:/cicd/scripts/python/
+
+          # Subir scripts
+          databricks fs cp scripts/python/ dbfs:/cicd/scripts/python/ --recursive --overwrite
+
+      - name: Create or Update Databricks Jobs
+        run: |
+          echo "Creating/updating Databricks jobs..."
+          # Aquí puedes usar la API de Jobs o Databricks Asset Bundles
+          # Ejemplo con databricks CLI:
+          # databricks jobs create --json-file config/job_config.json
+
+      - name: Run smoke tests
+        env:
+          WAREHOUSE_ID: ${{ secrets.WAREHOUSE_ID }}
+        run: |
+          echo "Running smoke tests on deployed jobs..."
+          # Ejecutar un job de prueba o validación básica
