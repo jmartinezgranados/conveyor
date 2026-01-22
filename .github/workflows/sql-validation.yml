@@ -311,8 +311,7 @@ jobs:
           CATALOG: ${{ env.CATALOG }}
         run: |
           echo "🧪 Running data quality checks..."
-          export PATH="$PATH:/opt/hostedtoolcache/Python/3.10.19/x64/bin"         
-          python -m great_expectations --version
+          export PATH="$PATH:/opt/hostedtoolcache/Python/3.10.19/x64/bin"                   
           ge checkpoint run data_quality_checkpoint || echo "⚠️ Some data quality checks failed"
 
       - name: 📤 Upload test results
