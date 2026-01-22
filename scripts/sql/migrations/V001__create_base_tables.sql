@@ -7,8 +7,8 @@ CREATE TABLE IF NOT EXISTS main.bronze.customers1 (
     customer_id BIGINT GENERATED ALWAYS AS IDENTITY,
     customer_name STRING NOT NULL,
     email STRING NOT NULL,
-    created_at TIMESTAMP ,
-    updated_at TIMESTAMP ,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
     CONSTRAINT pk_customers PRIMARY KEY (customer_id)
 ) USING DELTA
 COMMENT 'Tabla de clientes';
@@ -20,8 +20,8 @@ CREATE TABLE IF NOT EXISTS bronze.products (
     product_name STRING NOT NULL,
     category STRING,
     price DECIMAL(10, 2),
-    created_at TIMESTAMP ,
-    updated_at TIMESTAMP ,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
     CONSTRAINT pk_products PRIMARY KEY (product_id)
 ) USING DELTA
 COMMENT 'Catálogo de productos';
