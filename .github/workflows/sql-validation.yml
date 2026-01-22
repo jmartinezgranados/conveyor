@@ -310,9 +310,8 @@ jobs:
           WAREHOUSE_ID: ${{ env.WAREHOUSE_ID }}
           CATALOG: ${{ env.CATALOG }}
         run: |
-          echo "🧪 Running data quality checks..."
-          # Usamos 'python -m' en lugar de llamar al comando 'ge' directamente
-          python -m great_expectations checkpoint run data_quality_checkpoint || echo "⚠️ Some data quality checks failed"
+          echo "🧪 Running data quality checks..."          
+          gx checkpoint run data_quality_checkpoint || echo "⚠️ Some data quality checks failed"
 
       - name: 📤 Upload test results
         if: always()
