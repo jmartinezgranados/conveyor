@@ -212,6 +212,42 @@ jobs:
           echo "token = ${{ secrets.DATABRICKS_TOKEN }}" >> ~/.databrickscfg
           echo "✅ Databricks CLI configured"
 
+      - name: 🔍 Verify Databricks connection
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: |
+          echo "🔍 Verifying Databricks connection..."
+          echo "----------------------------------------------"
+          echo "📌 Host: $DATABRICKS_HOST"
+          echo "📌 Token: ${DATABRICKS_TOKEN:0:10}... (truncated for security)"
+          echo "----------------------------------------------"
+
+          # Test connection using Databricks CLI
+          echo "🧪 Testing API connection..."
+          RESPONSE=$(curl -s -X GET \
+            -H "Authorization: Bearer $DATABRICKS_TOKEN" \
+            "$DATABRICKS_HOST/api/2.0/clusters/list" \
+            -w "\nHTTP_CODE:%{http_code}" 2>&1)
+
+          HTTP_CODE=$(echo "$RESPONSE" | grep "HTTP_CODE:" | cut -d: -f2)
+
+          echo "📡 API Response Code: $HTTP_CODE"
+
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ Successfully connected to Databricks!"
+          elif [ "$HTTP_CODE" = "401" ]; then
+            echo "❌ Authentication failed - check DATABRICKS_TOKEN"
+          elif [ "$HTTP_CODE" = "403" ]; then
+            echo "❌ Access denied - check token permissions"
+          elif [ "$HTTP_CODE" = "404" ]; then
+            echo "❌ Host not found - check DATABRICKS_HOST URL"
+          else
+            echo "⚠️ Unexpected response: $HTTP_CODE"
+            echo "Response: $(echo "$RESPONSE" | head -5)"
+          fi
+          echo "----------------------------------------------"
+
       - name: 📋 List SQL migrations
         run: |
           echo "📋 SQL migrations to execute:"
