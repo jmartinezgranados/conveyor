@@ -36,17 +36,26 @@ class DatabricksTokenManager:
         config = configparser.ConfigParser()
         config_path = Path.home() / ".databrickscfg"
 
+        print(f"  🔧 Buscando configuración...")
+        print(f"  🔧 Config path: {config_path}")
+        print(f"  🔧 Config exists: {config_path.exists()}")
+
         if config_path.exists():
             config.read(config_path)
+            print(f"  🔧 Profiles disponibles: {list(config.sections())}")
             if self.profile in config:
                 self.databricks_host = config[self.profile].get("host")
                 self.existing_token = config[self.profile].get("token")
+                print(f"  🔧 Usando profile: {self.profile}")
+                print(f"  🔧 Host desde config: {self.databricks_host}")
             else:
                 raise ValueError(f"Profile '{self.profile}' not found in .databrickscfg")
         else:
             # Usar variables de entorno como fallback
+            print(f"  🔧 No hay .databrickscfg, usando variables de entorno")
             self.databricks_host = os.getenv("DATABRICKS_HOST")
             self.existing_token = os.getenv("DATABRICKS_TOKEN")
+            print(f"  🔧 Host desde env: {self.databricks_host}")
 
             if not self.databricks_host or not self.existing_token:
                 raise ValueError(
@@ -78,9 +87,16 @@ class DatabricksTokenManager:
 
         payload = {"comment": comment, "lifetime_seconds": lifetime_hours * 60 * 60}
 
+        # Asegurar que el host no termina en /
+        host = self.databricks_host.rstrip("/")
+        url = f"{host}/api/2.0/token/create"
+
+        print(f"  📡 URL: {url}")
+        print(f"  📡 Host configurado: {self.databricks_host}")
+
         try:
             response = requests.post(
-                f"{self.databricks_host}/api/2.0/token/create",
+                url,
                 headers=self.headers,
                 json=payload,
                 timeout=30,
@@ -93,9 +109,11 @@ class DatabricksTokenManager:
                 return token_data
             else:
                 print(f"✗ Error creando token: {response.status_code} - {response.text}")
+                print(f"  URL usada: {url}")
                 return None
         except requests.exceptions.RequestException as e:
             print(f"✗ Error de conexión: {str(e)}")
+            print(f"  URL usada: {url}")
             return None
 
     def listar_tokens_por_patron(self, patron: str = None) -> List[Dict]:
