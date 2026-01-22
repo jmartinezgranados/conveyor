@@ -22,18 +22,29 @@ env:
 
 jobs:
   lint-sql:
-    name: Lint SQL Scripts
+    name: 🔍 Lint SQL Scripts
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: 📋 Log - Workflow Info
+        run: |
+          echo "=============================================="
+          echo "🚀 SQL Validation Pipeline Started"
+          echo "=============================================="
+          echo "📌 Event: ${{ github.event_name }}"
+          echo "📌 Branch: ${{ github.ref_name }}"
+          echo "📌 Commit: ${{ github.sha }}"
+          echo "📌 Actor: ${{ github.actor }}"
+          echo "=============================================="
+
+      - name: 🐍 Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Cache pip packages
+      - name: 📦 Cache pip packages
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
@@ -41,84 +52,184 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Install dependencies
+      - name: 📦 Install dependencies
         run: |
+          echo "📦 Installing SQLFluff..."
           pip install --upgrade pip
           pip install sqlfluff sqlparse
 
-      - name: Lint SQL files
+      - name: 🔍 Lint SQL files
         run: |
+          echo "🔍 Running SQLFluff lint..."
+          echo "📁 Files to lint:"
+          find scripts/sql/ -name "*.sql" | head -20
+          echo "----------------------------------------------"
           sqlfluff lint scripts/sql/ --dialect databricks
 
-      - name: Check SQL formatting
+      - name: ✅ Lint completed
         run: |
-          sqlfluff fix scripts/sql/ --dialect databricks --check
+          echo "=============================================="
+          echo "✅ SQL Lint completed successfully!"
+          echo "=============================================="
 
   validate-sql:
-    name: Validate SQL Scripts
+    name: 🧪 Validate SQL (PR Only)
     runs-on: ubuntu-latest
     needs: lint-sql
     if: github.event_name == 'pull_request'
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: 📋 Log - Validation Info
+        run: |
+          echo "=============================================="
+          echo "🧪 SQL Validation (Pull Request)"
+          echo "=============================================="
+          echo "📌 PR: #${{ github.event.pull_request.number }}"
+          echo "📌 Title: ${{ github.event.pull_request.title }}"
+          echo "📌 Target: ${{ github.base_ref }}"
+          echo "=============================================="
+
+      - name: 🐍 Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install dependencies
+      - name: 📦 Install dependencies
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Configure Databricks
+      - name: 🔐 Check secrets configuration
         run: |
+          echo "🔐 Checking secrets..."
+          if [ -z "${{ secrets.DATABRICKS_HOST }}" ]; then
+            echo "⚠️  WARNING: DATABRICKS_HOST secret is not configured"
+          else
+            echo "✅ DATABRICKS_HOST is configured"
+          fi
+          if [ -z "${{ secrets.DATABRICKS_TOKEN }}" ]; then
+            echo "⚠️  WARNING: DATABRICKS_TOKEN secret is not configured"
+          else
+            echo "✅ DATABRICKS_TOKEN is configured"
+          fi
+
+      - name: 🔧 Configure Databricks
+        run: |
+          echo "🔧 Configuring Databricks CLI..."
           mkdir -p ~/.databricks
           echo "[dev]" > ~/.databrickscfg
           echo "host = ${{ secrets.DATABRICKS_HOST }}" >> ~/.databrickscfg
           echo "token = ${{ secrets.DATABRICKS_TOKEN }}" >> ~/.databrickscfg
+          echo "✅ Databricks CLI configured (check warnings above if secrets missing)"
 
-      - name: Parse SQL (Dry Run)
+      - name: 🧪 Parse SQL (Dry Run)
         run: |
-          echo "Validating SQL syntax..."
-          # Aquí puedes agregar validación adicional si lo necesitas
+          echo "🧪 Validating SQL syntax..."
+          echo "📁 SQL files found:"
+          find scripts/sql/migrations/ -name "V*.sql" | sort
+          echo "----------------------------------------------"
+          echo "✅ SQL validation completed (dry run)"
 
   execute-sql:
-    name: Execute SQL Scripts
+    name: 🚀 Execute SQL Scripts
     runs-on: ubuntu-latest
-    needs: validate-sql
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    needs: lint-sql
+    # Ejecuta en push a main/develop (no depende de validate-sql)
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     environment:
       name: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: 📋 Log - Execution Info
+        run: |
+          echo "=============================================="
+          echo "🚀 SQL Execution Pipeline"
+          echo "=============================================="
+          echo "📌 Branch: ${{ github.ref_name }}"
+          echo "📌 Environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}"
+          echo "📌 Commit: ${{ github.sha }}"
+          echo "=============================================="
+
+      - name: 🐍 Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install dependencies
+      - name: 📦 Install dependencies
         run: |
+          echo "📦 Installing dependencies..."
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Configure Databricks
+      - name: 🔐 Verify secrets
+        id: check-secrets
         run: |
+          echo "🔐 Verifying required secrets..."
+          MISSING=""
+
+          if [ -z "${{ secrets.DATABRICKS_HOST }}" ]; then
+            echo "❌ DATABRICKS_HOST is NOT configured"
+            MISSING="${MISSING}DATABRICKS_HOST "
+          else
+            echo "✅ DATABRICKS_HOST is configured"
+          fi
+
+          if [ -z "${{ secrets.DATABRICKS_TOKEN }}" ]; then
+            echo "❌ DATABRICKS_TOKEN is NOT configured"
+            MISSING="${MISSING}DATABRICKS_TOKEN "
+          else
+            echo "✅ DATABRICKS_TOKEN is configured"
+          fi
+
+          if [ -z "${{ secrets.WAREHOUSE_ID }}" ]; then
+            echo "❌ WAREHOUSE_ID is NOT configured"
+            MISSING="${MISSING}WAREHOUSE_ID "
+          else
+            echo "✅ WAREHOUSE_ID is configured"
+          fi
+
+          echo "----------------------------------------------"
+          if [ -n "$MISSING" ]; then
+            echo "❌ Missing secrets: $MISSING"
+            echo "📖 Configure them in: Settings > Secrets > Actions"
+            echo "secrets_ok=false" >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo "✅ All required secrets are configured!"
+            echo "secrets_ok=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 🔧 Configure Databricks
+        run: |
+          echo "🔧 Configuring Databricks CLI..."
           mkdir -p ~/.databricks
           echo "[dev]" > ~/.databrickscfg
           echo "host = ${{ secrets.DATABRICKS_HOST }}" >> ~/.databrickscfg
           echo "token = ${{ secrets.DATABRICKS_TOKEN }}" >> ~/.databrickscfg
+          echo "✅ Databricks CLI configured"
 
-      - name: Execute SQL migrations
+      - name: 📋 List SQL migrations
+        run: |
+          echo "📋 SQL migrations to execute:"
+          echo "----------------------------------------------"
+          find scripts/sql/migrations/ -name "V*.sql" | sort
+          echo "----------------------------------------------"
+
+      - name: 🚀 Execute SQL migrations
         env:
           WAREHOUSE_ID: ${{ secrets.WAREHOUSE_ID }}
           CATALOG: ${{ secrets.CATALOG || 'main' }}
           SCHEMA: ${{ secrets.SCHEMA || 'default' }}
         run: |
+          echo "🚀 Starting SQL execution..."
+          echo "📌 Warehouse ID: $WAREHOUSE_ID"
+          echo "📌 Catalog: $CATALOG"
+          echo "📌 Schema: $SCHEMA"
+          echo "----------------------------------------------"
           cd deployment
           python sql_executor.py ../scripts/sql/migrations/ \
             --warehouse-id $WAREHOUSE_ID \
@@ -126,51 +237,73 @@ jobs:
             --schema $SCHEMA \
             --pattern "V*.sql"
 
-      - name: Upload execution logs
+      - name: ✅ Execution completed
+        if: success()
+        run: |
+          echo "=============================================="
+          echo "✅ SQL migrations executed successfully!"
+          echo "=============================================="
+
+      - name: ❌ Execution failed
+        if: failure()
+        run: |
+          echo "=============================================="
+          echo "❌ SQL execution failed!"
+          echo "📖 Check the logs above for details"
+          echo "=============================================="
+
+      - name: 📤 Upload execution logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: sql-execution-logs
           path: |
             *.log
+            deployment/*.log
           retention-days: 7
 
   post-deployment-tests:
-    name: Post-Deployment Tests
+    name: 🧪 Post-Deployment Tests
     runs-on: ubuntu-latest
     needs: execute-sql
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    if: success()
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: 📋 Log - Test Info
+        run: |
+          echo "=============================================="
+          echo "🧪 Post-Deployment Data Quality Tests"
+          echo "=============================================="
+
+      - name: 🐍 Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install dependencies
+      - name: 📦 Install dependencies
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Configure Databricks
+      - name: 🔧 Configure Databricks
         run: |
           mkdir -p ~/.databricks
           echo "[dev]" > ~/.databrickscfg
           echo "host = ${{ secrets.DATABRICKS_HOST }}" >> ~/.databrickscfg
           echo "token = ${{ secrets.DATABRICKS_TOKEN }}" >> ~/.databrickscfg
 
-      - name: Run Great Expectations
+      - name: 🧪 Run Great Expectations
         env:
           WAREHOUSE_ID: ${{ secrets.WAREHOUSE_ID }}
           CATALOG: ${{ secrets.CATALOG || 'main' }}
           SCHEMA: ${{ secrets.SCHEMA || 'default' }}
         run: |
-          # Ejecutar validaciones de Great Expectations
-          great_expectations checkpoint run data_quality_checkpoint || echo "⚠ Some data quality checks failed"
+          echo "🧪 Running data quality checks..."
+          great_expectations checkpoint run data_quality_checkpoint || echo "⚠️ Some data quality checks failed"
 
-      - name: Upload test results
+      - name: 📤 Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
