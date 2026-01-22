@@ -1,6 +1,6 @@
 -- V001__create_base_tables.sql
 -- Crea las tablas base del proyecto
-use catalog main;
+USE CATALOG main;
 
 -- Tabla de clientes
 CREATE TABLE IF NOT EXISTS bronze.customers1 (
