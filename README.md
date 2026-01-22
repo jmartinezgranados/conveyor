@@ -2,7 +2,9 @@
 
 Pipeline completo de CI/CD para despliegues de SQL y Python/PySpark en Databricks con validación estática, ejecución de tests y verificación post-despliegue con Great Expectations.
 
-## 🚀 Características
+![Conveyor](./conveyor.jpg)
+
+## Características
 
 - ✅ Análisis estático de código SQL (SQLFluff)
 - ✅ Análisis estático de código Python (Pylint, Black, Flake8)

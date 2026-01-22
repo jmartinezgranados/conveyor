@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS order_items (
 COMMENT 'Items de cada orden';
 
 -- Comentarios en columnas
-COMMENT ON TABLE customers IS 'Información de clientes registrados';
+COMMENT ON TABLE customers IS 'Clientes registrados';
 COMMENT ON TABLE products IS 'Catálogo de productos disponibles';
 COMMENT ON TABLE orders IS 'Órdenes realizadas por clientes';
 COMMENT ON TABLE order_items IS 'Detalle de productos en cada orden';
