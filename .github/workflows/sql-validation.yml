@@ -292,7 +292,8 @@ jobs:
       - name: 📦 Install dependencies
         run: |
           pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install great-expectations
+          # pip install -r requirements.txt
 
       - name: 🔧 Configure Databricks
         run: |
