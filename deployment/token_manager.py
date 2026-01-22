@@ -225,9 +225,14 @@ class DatabricksTokenManager:
         Returns:
             Estado del warehouse o None si falla
         """
+        # Limpiar warehouse_id si viene con prefijo
+        if "/warehouses/" in warehouse_id:
+            warehouse_id = warehouse_id.split("/warehouses/")[-1].split("/")[0].split("?")[0]
+
         try:
+            host = self.databricks_host.rstrip("/")
             response = requests.get(
-                f"{self.databricks_host}/api/2.0/sql/warehouses/{warehouse_id}",
+                f"{host}/api/2.0/sql/warehouses/{warehouse_id}",
                 headers=self.headers,
                 timeout=30,
             )
@@ -257,6 +262,15 @@ class DatabricksTokenManager:
         """
         print(f"\n=== Ejecutando query ===")
         print(f"Query: {query[:100]}..." if len(query) > 100 else f"Query: {query}")
+
+        # Limpiar warehouse_id si viene con prefijo
+        original_warehouse_id = warehouse_id
+        if "/warehouses/" in warehouse_id:
+            # Extraer solo el ID del warehouse
+            warehouse_id = warehouse_id.split("/warehouses/")[-1].split("/")[0].split("?")[0]
+            print(f"  ⚠️ Warehouse ID limpiado: {original_warehouse_id} -> {warehouse_id}")
+
+        print(f"  📡 Warehouse ID: {warehouse_id}")
 
         # Verificar estado del warehouse
         estado_warehouse = self.verificar_estado_warehouse(warehouse_id)
