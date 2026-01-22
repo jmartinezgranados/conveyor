@@ -1,4 +1,4 @@
-SELECT 
-            current_timestamp() as execution_time,
-            current_user() as user,
-            'Query ejecutada con token temporal' as mensaje
+SELECT
+    current_timestamp() AS execution_time,
+    current_user() AS usuario,
+    'Query ejecutada con token temporal' AS mensaje
