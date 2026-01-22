@@ -3,7 +3,7 @@
 USE CATALOG main;
 
 -- Tabla de clientes
-CREATE TABLE IF NOT EXISTS bronze.customers1 (
+CREATE TABLE IF NOT EXISTS main.bronze.customers1 (
     customer_id BIGINT GENERATED ALWAYS AS IDENTITY,
     customer_name STRING NOT NULL,
     email STRING NOT NULL,
@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS bronze.customers1 (
 ) USING DELTA
 COMMENT 'Tabla de clientes';
 
+/*
 -- Tabla de productos
 CREATE TABLE IF NOT EXISTS bronze.products (
     product_id BIGINT GENERATED ALWAYS AS IDENTITY,
@@ -38,7 +39,7 @@ CREATE TABLE IF NOT EXISTS bronze.orders (
 ) USING DELTA
 COMMENT 'Órdenes de compra';
 
-/*
+
 -- Tabla de items de orden
 CREATE TABLE IF NOT EXISTS order_items (
     order_item_id BIGINT GENERATED ALWAYS AS IDENTITY,
@@ -53,7 +54,7 @@ COMMENT 'Items de cada orden';
 */
 -- Comentarios en columnas
 COMMENT ON TABLE bronze.customers1 IS 'Clientes registrados';
-COMMENT ON TABLE bronze.products IS 'Catálogo de productos disponibles';
-COMMENT ON TABLE bronze.orders IS 'Órdenes realizadas por clientes';
+--COMMENT ON TABLE bronze.products IS 'Catálogo de productos disponibles';
+--COMMENT ON TABLE bronze.orders IS 'Órdenes realizadas por clientes';
 
 --COMMENT ON TABLE order_items IS 'Detalle de productos en cada orden';
