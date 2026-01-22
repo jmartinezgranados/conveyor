@@ -304,18 +304,16 @@ jobs:
 
       - name: 🧪 Run Great Expectations
         env:
+          GE_HOME: ${{ github.workspace }}/tests/great_expectations
           DATABRICKS_HOST: ${{ env.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
           WAREHOUSE_ID: ${{ env.WAREHOUSE_ID }}
           CATALOG: ${{ env.CATALOG }}
         run: |
           echo "🧪 Running data quality checks..."
-          which python
-          python --version
-          pip --version
-          python -m pip show great-expectations
+          export PATH="$PATH:/opt/hostedtoolcache/Python/3.10.19/x64/bin"         
           python -m great_expectations --version
-          python -m great_expectations checkpoint run data_quality_checkpoint || echo "⚠️ Some data quality checks failed"
+          ge checkpoint run data_quality_checkpoint || echo "⚠️ Some data quality checks failed"
 
       - name: 📤 Upload test results
         if: always()
