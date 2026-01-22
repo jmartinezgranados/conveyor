@@ -15,7 +15,7 @@ COMMENT 'Tabla de clientes';
 
 
 -- Tabla de productos
-CREATE TABLE IF NOT EXISTS bronze.products (
+CREATE TABLE IF NOT EXISTS main.bronze.products (
     product_id BIGINT GENERATED ALWAYS AS IDENTITY,
     product_name STRING NOT NULL,
     category STRING,
