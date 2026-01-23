@@ -1,0 +1,8 @@
+data_source databricks:
+  type: spark
+  method: databricks
+  host: ${DATABRICKS_HOST}
+  http_path: /sql/1.0/warehouses/${WAREHOUSE_ID}
+  token: ${DATABRICKS_TOKEN}
+  catalog: ${CATALOG}
+  schema: ${SCHEMA}

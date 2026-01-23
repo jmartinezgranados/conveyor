@@ -239,7 +239,7 @@ def cmd_info():
 
     # Verificar dependencias
     print("\nDependencias:")
-    for pkg in ["databricks-sdk", "pytest", "sqlfluff", "black", "great-expectations"]:
+    for pkg in ["databricks-sdk", "pytest", "sqlfluff", "black", "soda-core-spark"]:
         result = subprocess.run(
             [sys.executable, "-m", "pip", "show", pkg],
             capture_output=True,

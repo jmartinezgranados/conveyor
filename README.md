@@ -1,8 +1,6 @@
 # Conveyor CI/CD Pipeline
 
-Pipeline completo de CI/CD para despliegues de SQL y Python/PySpark en Databricks con validación estática, ejecución de tests y verificación post-despliegue con Great Expectations.
-
-![Conveyor](./conveyor.jpg)
+Pipeline completo de CI/CD para despliegues de SQL y Python/PySpark en Databricks con validación estática, ejecución de tests y verificación post-despliegue con Soda Core.
 
 ## Características
 
@@ -10,7 +8,7 @@ Pipeline completo de CI/CD para despliegues de SQL y Python/PySpark en Databrick
 - ✅ Análisis estático de código Python (Pylint, Black, Flake8)
 - ✅ Ejecución de scripts SQL en Databricks
 - ✅ Validación de notebooks PySpark
-- ✅ Tests post-despliegue con Great Expectations
+- ✅ Tests post-despliegue con Soda Core
 - ✅ Gestión automática de tokens temporales
 - ✅ Soporte para GitHub Actions y Azure DevOps
 - ✅ Configuración por entorno (dev/staging/prod)
@@ -25,9 +23,11 @@ databricks-cicd/
 │   ├── sql/                   # Scripts SQL
 │   └── python/                # Scripts Python/PySpark
 ├── tests/
-│   ├── great_expectations/    # Configuración GE
 │   ├── unit/                  # Tests unitarios
 │   └── integration/           # Tests de integración
+├── soda/                       # Data quality checks (Soda Core)
+│   ├── configuration.yml      # Conexión a Databricks
+│   └── checks/                # Checks por tabla
 ├── deployment/                 # Scripts de deployment
 ├── config/                     # Configuración por entorno
 └── docs/                       # Documentación
@@ -117,8 +117,8 @@ pytest tests/unit/ -v
 # Tests de integración
 pytest tests/integration/ -v
 
-# Great Expectations
-great_expectations checkpoint run data_quality_checkpoint
+# Soda Core
+soda scan -d databricks -c soda/configuration.yml soda/checks/
 ```
 
 ## 🚢 Deployment
@@ -160,7 +160,7 @@ graph LR
     C --> D[Lint Check]
     D --> E[Execute Scripts]
     E --> F[Run Tests]
-    F --> G[GE Validation]
+    F --> G[Soda Validation]
     G --> H[Merge to Main]
     H --> I[Deploy to Prod]
 ```
@@ -206,14 +206,35 @@ def test_full_pipeline():
     pass
 ```
 
-### Great Expectations
+### Soda Core (Data Quality)
+
+Soda Core valida la calidad de los datos directamente en Databricks.
 
 ```bash
-# Crear nueva expectation suite
-great_expectations suite new
+# Ejecutar todas las validaciones
+soda scan -d databricks -c soda/configuration.yml soda/checks/
 
-# Editar expectations
-great_expectations suite edit data_quality_suite
+# Validar tabla específica
+soda scan -d databricks -c soda/configuration.yml soda/checks/orders.yml
+```
+
+**Checks disponibles para `orders`:**
+- Row count > 0
+- Schema validation (columnas requeridas)
+- Not null: order_id, customer_id, order_date
+- Uniqueness: order_id
+- Range validation: total_amount (0 - 1M, 95% compliance)
+- Enum validation: status (pending, processing, completed, cancelled, shipped)
+- Customer diversity (min 10% unique)
+
+**Añadir nuevos checks:**
+
+```yaml
+# soda/checks/nueva_tabla.yml
+checks for nueva_tabla:
+  - row_count > 0
+  - missing_count(campo_requerido) = 0
+  - duplicate_count(campo_unico) = 0
 ```
 
 ## 🔧 Configuración por Entorno
@@ -234,7 +255,7 @@ warehouse_id: prod_warehouse_456
 
 - [Databricks SQL API](https://docs.databricks.com/api/workspace/statementexecution)
 - [SQLFluff Documentation](https://docs.sqlfluff.com/)
-- [Great Expectations](https://docs.greatexpectations.io/)
+- [Soda Core](https://docs.soda.io/)
 - [Databricks Asset Bundles](https://docs.databricks.com/dev-tools/bundles/)
 
 ## 🤝 Contribuir

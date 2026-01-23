@@ -19,11 +19,11 @@ token:
   lifetime_hours: 2
   prefix: sqlops_temp_dev_
 
-# Great Expectations
-great_expectations:
-  data_context_root: tests/great_expectations
-  checkpoint_name: data_quality_checkpoint
-  
+# Soda Core (Data Quality)
+soda:
+  config_path: soda/configuration.yml
+  checks_path: soda/checks/
+
 # Job Configuration
 jobs:
   etl_pipeline:

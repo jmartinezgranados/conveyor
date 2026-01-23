@@ -2,6 +2,7 @@
 SQL Executor para Databricks
 Ejecuta scripts SQL utilizando tokens temporales
 """
+
 import os
 import sys
 from pathlib import Path
@@ -31,7 +32,10 @@ class SQLExecutor:
 
         self.token_manager = DatabricksTokenManager(profile=profile)
         self.catalog = os.getenv("CATALOG", "main")
-        self.schema = os.getenv("SCHEMA", "default")
+
+        print(f"  📋 SQLExecutor inicializado:")
+        print(f"     Warehouse ID: {self.warehouse_id}")
+        print(f"     Catalog: {self.catalog} (env: {os.getenv('CATALOG', 'NO DEFINIDO')})")
 
     def leer_script_sql(self, filepath: str) -> str:
         """
@@ -122,16 +126,15 @@ class SQLExecutor:
             # Leer script
             sql_content = self.leer_script_sql(filepath)
 
-            # Añadir USE CATALOG y USE SCHEMA al inicio
-            use_statements = f"USE CATALOG {self.catalog};\nUSE SCHEMA {self.schema};\n"
-            sql_content = use_statements + sql_content
+            # Añadir USE CATALOG al inicio (el schema se define en cada script)
+            use_statement = f"USE CATALOG {self.catalog};\n"
+            sql_content = use_statement + sql_content
 
             # Dividir en statements
             statements = self.dividir_statements(sql_content)
 
             print(f"\nEncontrados {len(statements)} statements SQL")
-            print(f"Catalog: {self.catalog}")
-            print(f"Schema: {self.schema}\n")
+            print(f"Catalog: {self.catalog}\n")
 
             # Ejecutar cada statement
             all_success = True
@@ -214,7 +217,6 @@ def main():
     parser.add_argument("--warehouse-id", help="ID del SQL Warehouse")
     parser.add_argument("--profile", help="Perfil de Databricks CLI", default="dev")
     parser.add_argument("--catalog", help="Catalog a usar")
-    parser.add_argument("--schema", help="Schema a usar")
     parser.add_argument(
         "--continue-on-error", action="store_true", help="Continuar ejecutando aunque falle un statement"
     )
@@ -227,8 +229,6 @@ def main():
         os.environ["WAREHOUSE_ID"] = args.warehouse_id
     if args.catalog:
         os.environ["CATALOG"] = args.catalog
-    if args.schema:
-        os.environ["SCHEMA"] = args.schema
 
     # Crear executor
     try:
@@ -242,7 +242,9 @@ def main():
     if path.is_file():
         success = executor.ejecutar_script(str(path), continue_on_error=args.continue_on_error)
     elif path.is_dir():
-        success = executor.ejecutar_directorio(str(path), pattern=args.pattern, continue_on_error=args.continue_on_error)
+        success = executor.ejecutar_directorio(
+            str(path), pattern=args.pattern, continue_on_error=args.continue_on_error
+        )
     else:
         print(f"✗ Ruta no válida: {args.path}")
         sys.exit(1)

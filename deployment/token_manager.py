@@ -2,6 +2,7 @@
 Token Manager para Databricks
 Gestiona la creación, validación y eliminación de tokens temporales
 """
+
 import configparser
 import os
 import random
@@ -36,17 +37,26 @@ class DatabricksTokenManager:
         config = configparser.ConfigParser()
         config_path = Path.home() / ".databrickscfg"
 
+        print(f"  🔧 Buscando configuración...")
+        print(f"  🔧 Config path: {config_path}")
+        print(f"  🔧 Config exists: {config_path.exists()}")
+
         if config_path.exists():
             config.read(config_path)
+            print(f"  🔧 Profiles disponibles: {list(config.sections())}")
             if self.profile in config:
                 self.databricks_host = config[self.profile].get("host")
                 self.existing_token = config[self.profile].get("token")
+                print(f"  🔧 Usando profile: {self.profile}")
+                print(f"  🔧 Host desde config: {self.databricks_host}")
             else:
                 raise ValueError(f"Profile '{self.profile}' not found in .databrickscfg")
         else:
             # Usar variables de entorno como fallback
+            print(f"  🔧 No hay .databrickscfg, usando variables de entorno")
             self.databricks_host = os.getenv("DATABRICKS_HOST")
             self.existing_token = os.getenv("DATABRICKS_TOKEN")
+            print(f"  🔧 Host desde env: {self.databricks_host}")
 
             if not self.databricks_host or not self.existing_token:
                 raise ValueError(
@@ -78,9 +88,16 @@ class DatabricksTokenManager:
 
         payload = {"comment": comment, "lifetime_seconds": lifetime_hours * 60 * 60}
 
+        # Asegurar que el host no termina en /
+        host = self.databricks_host.rstrip("/")
+        url = f"{host}/api/2.0/token/create"
+
+        print(f"  📡 URL: {url}")
+        print(f"  📡 Host configurado: {self.databricks_host}")
+
         try:
             response = requests.post(
-                f"{self.databricks_host}/api/2.0/token/create",
+                url,
                 headers=self.headers,
                 json=payload,
                 timeout=30,
@@ -93,9 +110,11 @@ class DatabricksTokenManager:
                 return token_data
             else:
                 print(f"✗ Error creando token: {response.status_code} - {response.text}")
+                print(f"  URL usada: {url}")
                 return None
         except requests.exceptions.RequestException as e:
             print(f"✗ Error de conexión: {str(e)}")
+            print(f"  URL usada: {url}")
             return None
 
     def listar_tokens_por_patron(self, patron: str = None) -> List[Dict]:
@@ -207,9 +226,14 @@ class DatabricksTokenManager:
         Returns:
             Estado del warehouse o None si falla
         """
+        # Limpiar warehouse_id si viene con prefijo
+        if "/warehouses/" in warehouse_id:
+            warehouse_id = warehouse_id.split("/warehouses/")[-1].split("/")[0].split("?")[0]
+
         try:
+            host = self.databricks_host.rstrip("/")
             response = requests.get(
-                f"{self.databricks_host}/api/2.0/sql/warehouses/{warehouse_id}",
+                f"{host}/api/2.0/sql/warehouses/{warehouse_id}",
                 headers=self.headers,
                 timeout=30,
             )
@@ -222,9 +246,7 @@ class DatabricksTokenManager:
             print(f"✗ Error de conexión: {str(e)}")
             return None
 
-    def ejecutar_query(
-        self, token_value: str, warehouse_id: str, query: str, max_wait_seconds: int = 300
-    ) -> bool:
+    def ejecutar_query(self, token_value: str, warehouse_id: str, query: str, max_wait_seconds: int = 300) -> bool:
         """
         Ejecuta una query SQL en Databricks y espera a que termine
 
@@ -239,6 +261,15 @@ class DatabricksTokenManager:
         """
         print(f"\n=== Ejecutando query ===")
         print(f"Query: {query[:100]}..." if len(query) > 100 else f"Query: {query}")
+
+        # Limpiar warehouse_id si viene con prefijo
+        original_warehouse_id = warehouse_id
+        if "/warehouses/" in warehouse_id:
+            # Extraer solo el ID del warehouse
+            warehouse_id = warehouse_id.split("/warehouses/")[-1].split("/")[0].split("?")[0]
+            print(f"  ⚠️ Warehouse ID limpiado: {original_warehouse_id} -> {warehouse_id}")
+
+        print(f"  📡 Warehouse ID: {warehouse_id}")
 
         # Verificar estado del warehouse
         estado_warehouse = self.verificar_estado_warehouse(warehouse_id)
