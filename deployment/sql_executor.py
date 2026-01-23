@@ -2,6 +2,7 @@
 SQL Executor para Databricks
 Ejecuta scripts SQL utilizando tokens temporales
 """
+
 import os
 import sys
 from pathlib import Path
@@ -241,7 +242,9 @@ def main():
     if path.is_file():
         success = executor.ejecutar_script(str(path), continue_on_error=args.continue_on_error)
     elif path.is_dir():
-        success = executor.ejecutar_directorio(str(path), pattern=args.pattern, continue_on_error=args.continue_on_error)
+        success = executor.ejecutar_directorio(
+            str(path), pattern=args.pattern, continue_on_error=args.continue_on_error
+        )
     else:
         print(f"✗ Ruta no válida: {args.path}")
         sys.exit(1)

@@ -2,6 +2,7 @@
 Token Manager para Databricks
 Gestiona la creación, validación y eliminación de tokens temporales
 """
+
 import configparser
 import os
 import random
@@ -245,9 +246,7 @@ class DatabricksTokenManager:
             print(f"✗ Error de conexión: {str(e)}")
             return None
 
-    def ejecutar_query(
-        self, token_value: str, warehouse_id: str, query: str, max_wait_seconds: int = 300
-    ) -> bool:
+    def ejecutar_query(self, token_value: str, warehouse_id: str, query: str, max_wait_seconds: int = 300) -> bool:
         """
         Ejecuta una query SQL en Databricks y espera a que termine
 
