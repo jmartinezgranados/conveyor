@@ -57,16 +57,12 @@ stages:
 
           - script: |
               pip install -r requirements.txt
-              pip install pylint black flake8 mypy isort
+              pip install black flake8 mypy isort
             displayName: 'Install dependencies'
 
           - script: |
               black --check scripts/python/ deployment/
             displayName: 'Check formatting with Black'
-
-          - script: |
-              pylint scripts/python/ deployment/ --exit-zero
-            displayName: 'Run Pylint'
 
           - script: |
               flake8 scripts/python/ deployment/ --max-line-length=120

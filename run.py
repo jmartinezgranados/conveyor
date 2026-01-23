@@ -141,7 +141,6 @@ def cmd_lint_python():
     run_cmd("black --check scripts/python/ deployment/", check=False)
     run_cmd("isort --check-only scripts/python/ deployment/", check=False)
     run_cmd("flake8 scripts/python/ deployment/ --max-line-length=120", check=False)
-    run_cmd("pylint scripts/python/ deployment/ --exit-zero", check=False)
 
 
 def cmd_lint_sql():
