@@ -83,14 +83,20 @@ stages:
                     WAREHOUSE_ID: $(WAREHOUSE_ID)
                     CATALOG: $(CATALOG)
 
-      - job: PostDeploymentTests
-        displayName: 'Post-Deployment Tests (Soda)'
-        dependsOn: ExecuteSQL
+  - stage: PostDeploymentTests
+    displayName: 'Post-Deployment Tests'
+    dependsOn: Deploy
+    condition: succeeded()
+    jobs:
+      - job: SodaTests
+        displayName: 'Run Soda Data Quality Checks'
         pool:
           vmImage: 'ubuntu-latest'
         variables:
           - group: databricks-dev
         steps:
+          - checkout: self
+
           - task: UsePythonVersion@0
             inputs:
               versionSpec: '$(pythonVersion)'
