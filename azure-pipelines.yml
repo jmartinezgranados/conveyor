@@ -82,3 +82,29 @@ stages:
                     DATABRICKS_TOKEN: $(DATABRICKS_TOKEN)
                     WAREHOUSE_ID: $(WAREHOUSE_ID)
                     CATALOG: $(CATALOG)
+
+      - job: PostDeploymentTests
+        displayName: 'Post-Deployment Tests (Soda)'
+        dependsOn: ExecuteSQL
+        pool:
+          vmImage: 'ubuntu-latest'
+        variables:
+          - group: databricks-dev
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '$(pythonVersion)'
+
+          - script: |
+              pip install soda-core-spark databricks-sql-connector setuptools
+            displayName: 'Install Soda Core'
+
+          - script: |
+              soda scan -d databricks -c soda/configuration.yml soda/checks/
+            displayName: 'Run Soda data quality checks'
+            env:
+              DATABRICKS_HOST: $(DATABRICKS_HOST)
+              DATABRICKS_TOKEN: $(DATABRICKS_TOKEN)
+              WAREHOUSE_ID: $(WAREHOUSE_ID)
+              CATALOG: $(CATALOG)
+              SCHEMA: $(SCHEMA)

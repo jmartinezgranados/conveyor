@@ -75,3 +75,32 @@ jobs:
             --warehouse-id "$WAREHOUSE_ID" \
             --catalog "$CATALOG" \
             --pattern "V*.sql"
+
+  post-deployment-tests:
+    name: Post-Deployment Tests (Soda)
+    runs-on: ubuntu-latest
+    needs: execute-sql
+    if: success()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Soda Core
+        run: |
+          pip install --upgrade pip
+          pip install soda-core-spark databricks-sql-connector setuptools
+
+      - name: Run Soda Scan
+        env:
+          DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+          WAREHOUSE_ID: ${{ vars.WAREHOUSE_ID }}
+          CATALOG: ${{ vars.CATALOG }}
+          SCHEMA: ${{ vars.SCHEMA }}
+        run: |
+          soda scan -d databricks -c soda/configuration.yml soda/checks/
