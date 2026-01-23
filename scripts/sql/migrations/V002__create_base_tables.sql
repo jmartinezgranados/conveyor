@@ -31,11 +31,11 @@ COMMENT 'Catálogo de productos';
 CREATE TABLE IF NOT EXISTS main.bronze.orders (
     order_id BIGINT GENERATED ALWAYS AS IDENTITY,
     customer_id BIGINT NOT NULL,
-    order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+    order_date TIMESTAMP,
     total_amount DECIMAL(10, 2),
     status STRING DEFAULT 'pending',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP,
     CONSTRAINT pk_orders PRIMARY KEY (order_id)
 ) USING DELTA
 COMMENT 'Órdenes de compra';
