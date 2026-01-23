@@ -5,7 +5,7 @@ USE CATALOG main;
 -- Tabla de clientes
 CREATE TABLE IF NOT EXISTS main.bronze.customers1 (
     customer_id BIGINT GENERATED ALWAYS AS IDENTITY,
-    customer_name STRING NOT NULL,
+     customer_name STRING NOT NULL,      
     email STRING NOT NULL,
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
@@ -26,9 +26,9 @@ CREATE TABLE IF NOT EXISTS main.bronze.products (
 ) USING DELTA
 COMMENT 'Catálogo de productos';
 
-/*
+
 -- Tabla de órdenes
-CREATE TABLE IF NOT EXISTS bronze.orders (
+CREATE TABLE IF NOT EXISTS main.bronze.orders (
     order_id BIGINT GENERATED ALWAYS AS IDENTITY,
     customer_id BIGINT NOT NULL,
     order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
@@ -40,6 +40,24 @@ CREATE TABLE IF NOT EXISTS bronze.orders (
 ) USING DELTA
 COMMENT 'Órdenes de compra';
 
+INSERT INTO main.bronze.orders (
+    customer_id,
+    order_date,
+    total_amount,
+    status,
+    created_at,
+    updated_at
+)
+VALUES (
+    1001,
+    TIMESTAMP '2026-01-20 14:35:00',
+    249.99,
+    'completed',
+    CURRENT_TIMESTAMP(),
+    CURRENT_TIMESTAMP()
+);
+
+/*
 
 -- Tabla de items de orden
 CREATE TABLE IF NOT EXISTS order_items (
