@@ -122,7 +122,7 @@ stages:
               curl -X POST \
                 -u ":$(System.AccessToken)" \
                 -H "Content-Type: application/json-patch+json" \
-                "$(System.CollectionUri)$(System.TeamProject)/_apis/wit/workitems/\$Bug?api-version=7.0" \
+                "$(System.CollectionUri)$(System.TeamProject)/_apis/wit/workitems/\$Issue?api-version=7.0" \
                 -d '[
                   {"op": "add", "path": "/fields/System.Title", "value": "Data Quality Check Failed - $(Build.BuildNumber)"},
                   {"op": "add", "path": "/fields/System.Description", "value": "Data quality checks failed in build $(Build.BuildNumber) on branch $(Build.SourceBranchName).<br><br>Pipeline: $(Build.DefinitionName)<br>Commit: $(Build.SourceVersion)<br><br>Please review the Soda scan results and fix the data quality issues."},
