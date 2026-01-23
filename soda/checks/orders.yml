@@ -1,0 +1,54 @@
+# Checks de calidad de datos para la tabla orders
+# Equivalente a orders_quality_suite de Great Expectations
+
+checks for orders:
+  # Row count - verificar que existan registros
+  - row_count > 0:
+      name: La tabla debe tener registros
+
+  # Schema validation - validar estructura de columnas
+  - schema:
+      name: Validar estructura de columnas
+      fail:
+        when required column missing:
+          - order_id
+          - customer_id
+          - order_date
+          - total_amount
+          - status
+          - created_at
+          - updated_at
+
+  # Not null checks - campos requeridos
+  - missing_count(order_id) = 0:
+      name: order_id no debe ser null
+
+  - missing_count(customer_id) = 0:
+      name: customer_id no debe ser null
+
+  - missing_count(order_date) = 0:
+      name: order_date no debe ser null
+
+  # Uniqueness - order_id debe ser unico (clave primaria)
+  - duplicate_count(order_id) = 0:
+      name: order_id debe ser unico
+
+  # Value range - 95% de total_amount entre 0 y 1M
+  - invalid_percent(total_amount) < 5:
+      name: 95% de total_amount entre 0 y 1M
+      valid min: 0
+      valid max: 1000000
+
+  # Enum validation - status debe ser valor permitido
+  - invalid_count(status) = 0:
+      name: status debe ser valor permitido
+      valid values:
+        - pending
+        - processing
+        - completed
+        - cancelled
+        - shipped
+
+  # Customer diversity - al menos 10% de clientes unicos
+  - duplicate_percent(customer_id) < 90:
+      name: Diversidad de clientes (min 10% unicos)

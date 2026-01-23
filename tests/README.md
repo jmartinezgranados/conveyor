@@ -8,12 +8,14 @@ Este directorio contiene todas las pruebas del proyecto.
 tests/
 ├── unit/                    # Tests unitarios
 │   └── test_etl_pipeline.py
-├── integration/             # Tests de integración
-│   └── test_end_to_end.py
-└── great_expectations/      # Validación de calidad de datos
-    ├── expectations/        # Suites de expectativas
-    ├── checkpoints/         # Checkpoints configurados
-    └── great_expectations.yml
+└── integration/             # Tests de integración
+    └── test_end_to_end.py
+
+# Data quality (Soda Core) - en directorio raiz
+soda/
+├── configuration.yml        # Conexión a Databricks
+└── checks/
+    └── orders.yml           # Checks de la tabla orders
 ```
 
 ## Tests Unitarios
@@ -74,64 +76,42 @@ def test_full_pipeline():
     pass
 ```
 
-## Great Expectations
+## Soda Core
 
-Great Expectations valida la calidad de los datos en las tablas de Databricks.
-
-### Configuración
-
-```bash
-# Inicializar (solo primera vez)
-great_expectations init
-
-# Editar configuración
-nano tests/great_expectations/great_expectations.yml
-```
-
-### Crear Expectation Suite
-
-```bash
-# Crear nueva suite
-great_expectations suite new
-
-# Editar suite existente
-great_expectations suite edit orders_quality_suite
-```
+Soda Core valida la calidad de los datos en las tablas de Databricks.
 
 ### Ejecutar Validaciones
 
 ```bash
-# Ejecutar checkpoint
-great_expectations checkpoint run data_quality_checkpoint
+# Ejecutar todos los checks
+soda scan -d databricks -c soda/configuration.yml soda/checks/
 
-# Ver resultados
-great_expectations docs build
+# Ejecutar checks de una tabla específica
+soda scan -d databricks -c soda/configuration.yml soda/checks/orders.yml
 ```
 
-### Expectation Suites Disponibles
+### Checks Disponibles
 
-- **orders_quality_suite**: Valida la tabla `orders`
+- **orders.yml**: Valida la tabla `orders`
   - Row count > 0
   - Columnas requeridas presentes
-  - Tipos de datos correctos
-  - Valores en rangos esperados
-  - Status en lista de valores permitidos
+  - Campos no nulos (order_id, customer_id, order_date)
+  - order_id único
+  - total_amount en rango válido (95% entre 0 y 1M)
+  - status en valores permitidos
+  - Diversidad de clientes (min 10% únicos)
 
-- **customers_quality_suite**: Valida la tabla `customers`
-  - Email único
-  - Campos no nulos
-  - Formato de email válido
+### Añadir Nuevos Checks
 
-- **products_quality_suite**: Valida la tabla `products`
-  - Precios positivos
-  - Categorías válidas
-  - Nombres únicos
+Para añadir validaciones a una nueva tabla:
 
-### Checkpoints
-
-Los checkpoints ejecutan múltiples expectation suites y generan reportes.
-
-**data_quality_checkpoint**: Checkpoint principal que ejecuta todas las validaciones
+```yaml
+# soda/checks/nueva_tabla.yml
+checks for nueva_tabla:
+  - row_count > 0
+  - missing_count(campo_requerido) = 0
+  - duplicate_count(campo_unico) = 0
+```
 
 ## Markers
 
@@ -185,8 +165,8 @@ open htmlcov/index.html
 Los tests se ejecutan automáticamente en:
 
 - **Pull Requests**: Unit tests + integration tests
-- **Merge a develop**: Todos los tests + Great Expectations
-- **Merge a main**: Todos los tests + Great Expectations + deploy
+- **Merge a develop**: Todos los tests + Soda Core
+- **Merge a main**: Todos los tests + Soda Core + deploy
 
 ## Best Practices
 
@@ -204,7 +184,7 @@ Los tests se ejecutan automáticamente en:
 pip install pyspark
 ```
 
-### Error: Great Expectations no encuentra datasource
+### Error: Soda Core no encuentra datasource
 
 Verifica las variables de entorno:
 ```bash
@@ -224,5 +204,5 @@ databricks workspace list --profile dev
 ## Recursos
 
 - [Pytest Documentation](https://docs.pytest.org/)
-- [Great Expectations](https://docs.greatexpectations.io/)
+- [Soda Core](https://docs.greatexpectations.io/)
 - [PySpark Testing](https://spark.apache.org/docs/latest/api/python/getting_started/testing_pyspark.html)

@@ -281,7 +281,7 @@ jobs:
       - name: 📋 Log - Test Info
         run: |
           echo "=============================================="
-          echo "🧪 Post-Deployment Data Quality Tests"
+          echo "🧪 Post-Deployment Data Quality Tests (Soda)"
           echo "=============================================="
 
       - name: 🐍 Set up Python
@@ -289,43 +289,26 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: 📦 Install dependencies
+      - name: 📦 Install Soda Core
         run: |
           python -m pip install --upgrade pip
-          # Instalamos GE y el conector de sqlalchemy para Databricks si es necesario
-          python -m pip install great-expectations sqlalchemy-databricks databricks-sql-connector
+          python -m pip install soda-core-spark databricks-sql-connector setuptools
 
-      - name: 🔧 Configure Databricks
-        run: |
-          mkdir -p ~/.databricks
-          echo "[dev]" > ~/.databrickscfg
-          echo "host = ${{ env.DATABRICKS_HOST }}" >> ~/.databrickscfg
-          echo "token = ${{ secrets.DATABRICKS_TOKEN }}" >> ~/.databrickscfg
-
-      - name: 🧪 Run Great Expectations
+      - name: 🧪 Run Soda Scan
         env:
-          GE_HOME: ${{ github.workspace }}/tests/great_expectations
           DATABRICKS_HOST: ${{ env.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
           WAREHOUSE_ID: ${{ env.WAREHOUSE_ID }}
           CATALOG: ${{ env.CATALOG }}
+          SCHEMA: ${{ vars.SCHEMA || 'default' }}
         run: |
-          echo "🧪 Running data quality checks..."
-          
-          # 1. Aseguramos que los binarios de Python local estén en el PATH
-          export PATH=$PATH:/home/runner/.local/bin:$pythonLocation/bin
-          
-          # 2. Intentamos el nuevo comando 'gx' que es el estándar de la v1.0
-          # Si falla, intentamos con el nombre largo pero SIN 'python -m'
-          gx checkpoint run data_quality_checkpoint || \
-          great_expectations checkpoint run data_quality_checkpoint || \
-          echo "⚠️ No se pudo ejecutar el comando de GX"
+          echo "🧪 Running Soda data quality checks..."
+          soda scan -d databricks -c soda/configuration.yml soda/checks/
 
       - name: 📤 Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
-          path: |
-            tests/great_expectations/uncommitted/validations/
+          name: soda-scan-results
+          path: .soda/
           retention-days: 30

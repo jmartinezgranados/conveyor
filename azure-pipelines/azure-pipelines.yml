@@ -208,13 +208,17 @@ stages:
             displayName: 'Configure Databricks CLI'
 
           - script: |
+              pip install soda-core-spark databricks-sql-connector setuptools
+            displayName: 'Install Soda Core'
+
+          - script: |
               export DATABRICKS_HOST=$(databricks.host)
               export DATABRICKS_TOKEN=$(databricks.token)
               export WAREHOUSE_ID=$(warehouse.id)
               export CATALOG=$(catalog.name)
               export SCHEMA=$(schema.name)
-              great_expectations checkpoint run data_quality_checkpoint
-            displayName: 'Run Great Expectations validation'
+              soda scan -d databricks -c soda/configuration.yml soda/checks/
+            displayName: 'Run Soda data quality validation'
             continueOnError: true
 
   - stage: Deploy_Prod
@@ -265,10 +269,14 @@ stages:
                   displayName: 'Upload Python scripts'
 
                 - script: |
+                    pip install soda-core-spark databricks-sql-connector setuptools
+                  displayName: 'Install Soda Core'
+
+                - script: |
                     export DATABRICKS_HOST=$(databricks.host)
                     export DATABRICKS_TOKEN=$(databricks.token)
                     export WAREHOUSE_ID=$(warehouse.id)
                     export CATALOG=$(catalog.name)
                     export SCHEMA=$(schema.name)
-                    great_expectations checkpoint run data_quality_checkpoint
-                  displayName: 'Validate data quality'
+                    soda scan -d databricks -c soda/configuration.yml soda/checks/
+                  displayName: 'Run Soda data quality validation'

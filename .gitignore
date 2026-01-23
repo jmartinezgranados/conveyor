@@ -50,10 +50,8 @@ htmlcov/
 .tox/
 .hypothesis/
 
-# Great Expectations
-tests/great_expectations/uncommitted/
-tests/great_expectations/checkpoints/*.yml
-!tests/great_expectations/checkpoints/.gitkeep
+# Soda Core
+.soda/
 
 # Logs
 *.log

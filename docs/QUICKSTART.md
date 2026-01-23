@@ -148,7 +148,7 @@ El CI/CD se ejecutará automáticamente y validará:
 - ✅ Tests unitarios
 - ✅ Tests de integración (en PR)
 - ✅ Ejecución de scripts (en merge a main/develop)
-- ✅ Validación con Great Expectations
+- ✅ Validación con Soda Core
 
 ## 🔧 Comandos Útiles
 
@@ -162,14 +162,11 @@ make list-tokens
 make clean-tokens
 ```
 
-### Great Expectations
+### Soda Core
 
 ```bash
-# Inicializar (solo primera vez)
-make ge-init
-
 # Ejecutar validaciones
-make ge-validate
+soda scan -d databricks -c soda/configuration.yml soda/checks/
 ```
 
 ### Formateo automático
@@ -195,7 +192,7 @@ databricks-cicd/
 ├── tests/
 │   ├── unit/                    # Tests unitarios
 │   ├── integration/             # Tests de integración
-│   └── great_expectations/      # Validaciones de calidad
+├── soda/                        # Validaciones de calidad (Soda Core)
 ├── deployment/
 │   ├── token_manager.py         # Gestión de tokens
 │   └── sql_executor.py          # Executor de SQL
@@ -240,7 +237,7 @@ pip install -e .
 1. Lee la [documentación completa](../README.md)
 2. Revisa los [ejemplos de SQL](../scripts/sql/)
 3. Estudia los [pipelines de ejemplo](../scripts/python/jobs/)
-4. Configura [Great Expectations](../tests/great_expectations/)
+4. Revisa los [checks de Soda](../soda/checks/)
 
 ## 💡 Tips
 
@@ -254,7 +251,7 @@ pip install -e .
 ¿Problemas? Consulta:
 - README principal: [README.md](../README.md)
 - Documentación de Databricks: https://docs.databricks.com
-- Great Expectations: https://docs.greatexpectations.io
+- Soda Core: https://docs.soda.io
 
 ---
 
