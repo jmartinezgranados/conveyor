@@ -204,5 +204,5 @@ databricks workspace list --profile dev
 ## Recursos
 
 - [Pytest Documentation](https://docs.pytest.org/)
-- [Soda Core](https://docs.greatexpectations.io/)
+- [Soda Core](https://docs.soda.io/)
 - [PySpark Testing](https://spark.apache.org/docs/latest/api/python/getting_started/testing_pyspark.html)

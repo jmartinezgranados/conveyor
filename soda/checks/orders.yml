@@ -1,5 +1,4 @@
 # Checks de calidad de datos para la tabla orders
-# Equivalente a orders_quality_suite de Great Expectations
 
 checks for orders:
   # Row count - verificar que existan registros

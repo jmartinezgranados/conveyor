@@ -160,8 +160,8 @@ graph LR
     C --> D[Lint Check]
     D --> E[Execute Scripts]
     E --> F[Run Tests]
-    F --> G[GE Validation]
-    G[Soda Validation] --> H[Merge to Main]
+    F --> G[Soda Validation]
+    G --> H[Merge to Main]
     H --> I[Deploy to Prod]
 ```
 
@@ -206,13 +206,35 @@ def test_full_pipeline():
     pass
 ```
 
-### Soda Core
+### Soda Core (Data Quality)
+
+Soda Core valida la calidad de los datos directamente en Databricks.
 
 ```bash
-# Ejecutar validaciones
+# Ejecutar todas las validaciones
 soda scan -d databricks -c soda/configuration.yml soda/checks/
 
-# Añadir nuevos checks - editar soda/checks/<tabla>.yml
+# Validar tabla específica
+soda scan -d databricks -c soda/configuration.yml soda/checks/orders.yml
+```
+
+**Checks disponibles para `orders`:**
+- Row count > 0
+- Schema validation (columnas requeridas)
+- Not null: order_id, customer_id, order_date
+- Uniqueness: order_id
+- Range validation: total_amount (0 - 1M, 95% compliance)
+- Enum validation: status (pending, processing, completed, cancelled, shipped)
+- Customer diversity (min 10% unique)
+
+**Añadir nuevos checks:**
+
+```yaml
+# soda/checks/nueva_tabla.yml
+checks for nueva_tabla:
+  - row_count > 0
+  - missing_count(campo_requerido) = 0
+  - duplicate_count(campo_unico) = 0
 ```
 
 ## 🔧 Configuración por Entorno

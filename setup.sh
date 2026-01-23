@@ -125,20 +125,13 @@ EOF
     fi
 fi
 
-# Initialize Great Expectations (optional)
+# Verify Soda Core installation
 echo ""
-read -p "¿Deseas inicializar Great Expectations? (y/N) " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    if [ ! -d "tests/great_expectations" ]; then
-        echo "Inicializando Great Expectations..."
-        cd tests
-        great_expectations init --no-view
-        cd ..
-        echo -e "${GREEN}✓ Great Expectations inicializado${NC}"
-    else
-        echo -e "${YELLOW}⚠ Great Expectations ya está inicializado${NC}"
-    fi
+echo "Verificando instalación de Soda Core..."
+if [ -d "soda" ] && [ -f "soda/configuration.yml" ]; then
+    echo -e "${GREEN}✓ Soda Core configurado en soda/${NC}"
+else
+    echo -e "${YELLOW}⚠ Directorio soda/ no encontrado - verificar estructura${NC}"
 fi
 
 # Install pre-commit hooks (optional)
@@ -155,8 +148,7 @@ fi
 echo ""
 echo "Creando directorios necesarios..."
 mkdir -p logs
-mkdir -p tests/great_expectations/uncommitted/validations
-mkdir -p tests/great_expectations/checkpoints
+mkdir -p soda/checks
 echo -e "${GREEN}✓ Directorios creados${NC}"
 
 # Summary

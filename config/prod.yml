@@ -19,12 +19,12 @@ token:
   lifetime_hours: 1  # Shorter lifetime for production
   prefix: sqlops_temp_prod_
 
-# Great Expectations
-great_expectations:
-  data_context_root: tests/great_expectations
-  checkpoint_name: data_quality_checkpoint
+# Soda Core (Data Quality)
+soda:
+  config_path: soda/configuration.yml
+  checks_path: soda/checks/
   fail_on_error: true  # Strict mode in production
-  
+
 # Job Configuration
 jobs:
   etl_pipeline:
