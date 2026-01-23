@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS main.bronze.orders (
     customer_id BIGINT NOT NULL,
     order_date TIMESTAMP,
     total_amount DECIMAL(10, 2),
-    status STRING DEFAULT 'pending',
+    status STRING,
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
     CONSTRAINT pk_orders PRIMARY KEY (order_id)
