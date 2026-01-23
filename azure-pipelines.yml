@@ -106,11 +106,29 @@ stages:
             displayName: 'Install Soda Core'
 
           - script: |
-              soda scan -d databricks -c soda/configuration.yml soda/checks/
+              soda scan -d databricks -c soda/configuration.yml soda/checks/ 2>&1 | tee soda-output.txt
+              exit ${PIPESTATUS[0]}
             displayName: 'Run Soda data quality checks'
+            continueOnError: true
+            name: sodaScan
             env:
               DATABRICKS_HOST: $(DATABRICKS_HOST)
               DATABRICKS_TOKEN: $(DATABRICKS_TOKEN)
               WAREHOUSE_ID: $(WAREHOUSE_ID)
               CATALOG: $(CATALOG)
               SCHEMA: $(SCHEMA)
+
+          - script: |
+              curl -X POST \
+                -u ":$(System.AccessToken)" \
+                -H "Content-Type: application/json-patch+json" \
+                "$(System.CollectionUri)$(System.TeamProject)/_apis/wit/workitems/\$Bug?api-version=7.0" \
+                -d '[
+                  {"op": "add", "path": "/fields/System.Title", "value": "Data Quality Check Failed - $(Build.BuildNumber)"},
+                  {"op": "add", "path": "/fields/System.Description", "value": "Data quality checks failed in build $(Build.BuildNumber) on branch $(Build.SourceBranchName).<br><br>Pipeline: $(Build.DefinitionName)<br>Commit: $(Build.SourceVersion)<br><br>Please review the Soda scan results and fix the data quality issues."},
+                  {"op": "add", "path": "/fields/System.AssignedTo", "value": "$(Build.RequestedFor)"}
+                ]'
+            displayName: 'Create Work Item on Soda Failure'
+            condition: eq(variables['Agent.JobStatus'], 'SucceededWithIssues')
+            env:
+              SYSTEM_ACCESSTOKEN: $(System.AccessToken)
