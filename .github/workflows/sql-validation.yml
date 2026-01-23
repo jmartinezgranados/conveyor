@@ -1,4 +1,4 @@
-name: Code Validation
+name: SQL Validation and Deployment
 
 on:
   push:
@@ -7,18 +7,15 @@ on:
       - develop
       - 'feature/**'
     paths:
-      - 'scripts/**'
+      - 'scripts/sql/**'
       - 'deployment/**'
-      - 'tests/**'
       - '.github/workflows/sql-validation.yml'
   pull_request:
     branches:
       - main
       - develop
     paths:
-      - 'scripts/**'
-      - 'deployment/**'
-      - 'tests/**'
+      - 'scripts/sql/**'
 
 env:
   PYTHON_VERSION: '3.10'
@@ -36,14 +33,6 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Cache pip packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-sqlfluff
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
       - name: Install dependencies
         run: |
           pip install --upgrade pip
@@ -52,3 +41,37 @@ jobs:
       - name: Lint SQL files
         run: |
           sqlfluff lint scripts/sql/ --dialect databricks
+
+  execute-sql:
+    name: Execute SQL Scripts
+    runs-on: ubuntu-latest
+    needs: lint-sql
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'development' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install databricks-sdk requests python-dotenv
+
+      - name: Execute SQL migrations
+        env:
+          DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+          WAREHOUSE_ID: ${{ vars.WAREHOUSE_ID }}
+          CATALOG: ${{ vars.CATALOG }}
+        run: |
+          cd deployment
+          python sql_executor.py ../scripts/sql/migrations/ \
+            --warehouse-id "$WAREHOUSE_ID" \
+            --catalog "$CATALOG" \
+            --pattern "V*.sql"

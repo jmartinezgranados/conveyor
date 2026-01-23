@@ -6,10 +6,9 @@ trigger:
       - feature/*
   paths:
     include:
-      - scripts/**
+      - scripts/sql/**
       - deployment/**
-      - tests/**
-      - azure-pipelines/**
+      - azure-pipelines.yml
 
 pr:
   branches:
@@ -18,11 +17,10 @@ pr:
       - develop
   paths:
     include:
-      - scripts/**
+      - scripts/sql/**
 
 variables:
   pythonVersion: '3.10'
-  workingDirectory: '$(System.DefaultWorkingDirectory)'
 
 stages:
   - stage: Validate
@@ -45,3 +43,42 @@ stages:
           - script: |
               sqlfluff lint scripts/sql/ --dialect databricks
             displayName: 'Run SQLFluff'
+
+  - stage: Deploy
+    displayName: 'Execute SQL Scripts'
+    dependsOn: Validate
+    condition: and(succeeded(), in(variables['Build.SourceBranch'], 'refs/heads/develop', 'refs/heads/main'))
+    jobs:
+      - deployment: ExecuteSQL
+        displayName: 'Execute SQL Migrations'
+        pool:
+          vmImage: 'ubuntu-latest'
+        environment: 'development'
+        variables:
+          - group: databricks-dev
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+
+                - task: UsePythonVersion@0
+                  inputs:
+                    versionSpec: '$(pythonVersion)'
+
+                - script: |
+                    pip install databricks-sdk requests python-dotenv
+                  displayName: 'Install dependencies'
+
+                - script: |
+                    cd deployment
+                    python sql_executor.py ../scripts/sql/migrations/ \
+                      --warehouse-id $(WAREHOUSE_ID) \
+                      --catalog $(CATALOG) \
+                      --pattern "V*.sql"
+                  displayName: 'Execute SQL migrations'
+                  env:
+                    DATABRICKS_HOST: $(DATABRICKS_HOST)
+                    DATABRICKS_TOKEN: $(DATABRICKS_TOKEN)
+                    WAREHOUSE_ID: $(WAREHOUSE_ID)
+                    CATALOG: $(CATALOG)
