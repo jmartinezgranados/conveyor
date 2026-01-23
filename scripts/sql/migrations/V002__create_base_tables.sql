@@ -5,7 +5,7 @@ USE CATALOG main;
 -- Tabla de clientes
 CREATE TABLE IF NOT EXISTS main.bronze.customers1 (
     customer_id BIGINT GENERATED ALWAYS AS IDENTITY,
-     customer_name STRING NOT NULL,      
+    customer_name STRING NOT NULL,
     email STRING NOT NULL,
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
