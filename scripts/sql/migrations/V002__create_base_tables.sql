@@ -52,7 +52,7 @@ VALUES (
     1001,
     TIMESTAMP '2026-01-20 14:35:00',
     249.99,
-    'completed',
+    'pending',
     CURRENT_TIMESTAMP(),
     CURRENT_TIMESTAMP()
 );
